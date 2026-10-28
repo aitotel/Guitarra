@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#14171c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Escalas">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Escalas por el mástil</title>
+<style>
+:root{
+  --bg:#14171c; --panel:#1d222a; --panel2:#262d37; --txt:#e8ecf1; --mut:#8e9aab; --line:#3a4350;
+  --accent:#ffb347; --chord:#4aa3ff; --root:#ff6b4a; --scale:#9fb3c8; --ok:#4cd08a; --warn:#ffd23f;
+  --wood:#2a2118;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+header{padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{margin:0 0 4px;font-size:15px;color:var(--mut);font-weight:600}
+#resumen{font-size:18px;font-weight:600;color:var(--accent)}
+#avisoFile{display:none;margin:10px 16px;padding:10px 14px;background:#4a2a1a;border:1px solid var(--root);border-radius:8px}
+#avisoFile code{background:#000;padding:2px 6px;border-radius:4px}
+main{padding:12px 16px;max-width:1300px;margin:0 auto}
+.top{display:grid;grid-template-columns:minmax(300px,1fr) minmax(300px,1fr);gap:14px}
+@media(max-width:800px){.top{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+#playerBox{aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden}
+#playerBox iframe{width:100%;height:100%}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+button,select,input,textarea{font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+button.primary{background:var(--chord);color:#000;border-color:var(--chord);font-weight:600}
+button.danger:hover{border-color:var(--root);color:var(--root)}
+#ajusteInicio{display:flex;align-items:center;gap:6px;margin-top:4px}
+#ajusteInicio .lado{flex:1;display:flex;gap:3px;min-width:0}
+#ajusteInicio button{padding:3px 5px;font-size:11px;white-space:nowrap}
+#ajusteInicio #nAqui{font-size:12px;padding:5px 8px}
+/* vista de lectura de la progresión (líneas de 4 compases) */
+#vueltasBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;font-size:13px}
+#vueltasBar .vl{color:var(--mut)}
+#vueltasBar .vch{display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border:1px solid var(--line);border-radius:6px}
+#vueltasBar .vch.cur{border-color:var(--ok);background:rgba(76,208,138,.15)}
+#vueltasBar select{padding:2px 4px;font-size:13px}
+#vueltasBar{display:block}
+#vueltasBar .etp-chips{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+#vueltasBar .vch{white-space:nowrap}
+#vueltasBar .vch small{color:var(--mut)}
+#vueltasBar .etp-ed{margin-top:6px;padding:6px;background:var(--panel2);border-radius:8px;display:flex;flex-direction:column;gap:5px}
+#vueltasBar .etr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+#vueltasBar .etr input[type=number]{width:52px;padding:1px 4px;font-size:12px}
+#vueltasBar .etr .mut{color:var(--mut)}
+#vueltasBar .etr{gap:4px;white-space:nowrap}
+#vueltasBar .etr select{font-size:12px;padding:1px 3px;height:22px}
+#vueltasBar .etr button{padding:0 6px;height:22px;font-size:12px}
+#vueltasBar .hasta{color:var(--ok);font-size:12px;white-space:nowrap}
+#vueltasBar button,#escPanel button{padding:3px 8px;font-size:12px}
+#escPanel{margin-top:6px}
+#escPanel .hint{font-size:12px;color:var(--mut)}
+#escPanel .escp{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13px;background:var(--panel2);padding:8px;border-radius:8px}
+#escPanel label{flex-direction:row;align-items:center;gap:6px;color:var(--txt);font-size:13px}
+#escPanel select{font-size:13px;padding:3px 4px}
+.chart .ci select{display:block;margin-top:3px;max-width:100%;font-size:11px;font-weight:400;padding:1px 2px;color:var(--accent)}
+.chart .cbar.sel{outline:2px solid var(--chord);outline-offset:-2px}
+.chart .ci{display:inline-block;vertical-align:top;margin-right:6px}
+.chart .ci i{display:block;font-size:10px;font-weight:400;font-style:normal;color:var(--accent)}
+.chart .crow{display:grid;grid-template-columns:repeat(4,1fr);margin-bottom:6px}
+.chart .cbar{position:relative;border-left:2px solid var(--line);padding:16px 10px 8px;font-size:20px;font-weight:700;min-height:52px;color:var(--mut);white-space:nowrap;overflow:hidden}
+.chart .cbar.last{border-right:2px solid var(--line)}
+.chart .cbar.empty{border-color:transparent}
+.chart .cbar small{position:absolute;top:2px;left:6px;font-size:10px;font-weight:400;color:var(--mut)}
+.chart .cbar .rep{color:var(--line)}
+.chart .cbar.act{background:rgba(255,179,71,.22);color:var(--txt)}
+.chart .cbar.act .rep{color:var(--mut)}
+#progBoxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+.bx{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:5px}
+.bx .bxh{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--mut)}
+.bx .bxh b{flex:1;color:var(--txt)}
+.bx button{padding:2px 6px;font-size:12px}
+.bx select{width:100%;padding:3px 4px;font-size:13px}
+.bx .cc{display:flex;flex-direction:column;gap:3px;padding:4px;border-radius:6px;background:var(--bg)}
+.bx .cc select.b{color:var(--mut)}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut)}
+label input,label select,label textarea{font-size:15px}
+.tabs{display:flex;gap:6px;margin:14px 0 8px}
+.tabs button{padding:8px 18px}
+#contador{position:relative;overflow:hidden;text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:230px}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:var(--ok)}
+#flash.f1{animation:fl .45s ease-out}
+#flash.f2{background:var(--warn);animation:fl .45s ease-out}
+@keyframes fl{0%{opacity:.75}100%{opacity:0}}
+#acordeActual{font-size:76px;font-weight:800;line-height:1;position:relative}
+#acordeSig{font-size:18px;color:var(--mut);margin-top:6px;position:relative}
+#compas{margin-top:10px;font-size:16px;position:relative}
+#tiempos{display:flex;justify-content:center;gap:10px;margin-top:8px;position:relative}
+#tiempos span{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--mut)}
+#tiempos span.on{background:var(--accent);color:#000;border-color:var(--accent)}
+#tiempos span.on.uno{background:var(--ok);border-color:var(--ok)}
+#tiempos span.on.ult{background:var(--warn);border-color:var(--warn)}
+#aviso{min-height:26px;margin-top:8px;font-weight:700;font-size:17px;color:var(--warn);position:relative}
+#aviso.nuevo{color:#fff;background:var(--chord);border-radius:8px;padding:4px 10px;font-size:20px}
+#flash.f3{background:var(--chord);animation:fl .7s ease-out}
+#posBadge{margin-top:8px;font-size:22px;font-weight:800;color:var(--chord);position:relative}
+#posBadge small{display:block;font-size:12px;font-weight:400;color:var(--mut)}
+#fretWrap{display:grid;grid-template-columns:1fr auto;gap:12px;margin-top:12px;align-items:start}
+@media(max-width:900px){#fretWrap{grid-template-columns:1fr}}
+#fretScroll{overflow-x:auto}
+#fret svg{display:block;min-width:900px;width:100%;height:auto}
+#posInfo{font-size:16px;font-weight:600;margin-bottom:6px}
+#mini{text-align:center;font-size:13px;color:var(--mut)}
+#mini svg{display:block;margin:6px auto 0}
+.leyenda{font-size:12px;color:var(--mut);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px;margin-right:4px}
+.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
+.checks{display:flex;gap:6px;flex-wrap:wrap}
+.checks label{flex-direction:row;align-items:center;gap:4px;color:var(--txt);font-size:14px;background:var(--panel2);padding:5px 9px;border-radius:6px;border:1px solid var(--line)}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.wide{grid-column:1/-1}
+textarea{min-height:60px;resize:vertical}
+#lista .it{display:flex;gap:10px;align-items:center;padding:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#lista .it b{flex:1;min-width:160px}
+#lista .meta{color:var(--mut);font-size:13px}
+.msg{margin-top:8px;font-size:13px}
+.msg.err{color:var(--root)} .msg.ok{color:var(--ok)}
+/* mástil */
+.nh{fill:var(--bg);stroke:var(--scale);stroke-width:2}
+.nc{fill:var(--chord)} .nr{fill:var(--root)}
+.tg{stroke:#fff;stroke-width:3}
+.tx{fill:var(--txt);font-size:11px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.txc{fill:#000;font-size:11px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.fnum{fill:var(--mut);font-size:11px;text-anchor:middle}
+.snm{fill:var(--mut);font-size:11px;text-anchor:middle;dominant-baseline:central}
+
+/* ---- Diseño compacto: todo en una pantalla ---- */
+header{padding:6px 14px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+header h1{display:none}
+#playerBox{width:min(100%,290px);margin:0 auto}
+#fretHead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:10px;align-items:start}
+@media(max-width:900px){.fgrid{grid-template-columns:1fr}}
+.fbBand{position:absolute;left:34px;right:4px;top:0;z-index:2;display:flex;gap:14px;align-items:baseline;white-space:nowrap;overflow:hidden;font-size:12px;color:var(--mut)}
+.fbBand b{color:var(--txt)}
+.fbBand #posInfo{font-size:13px;font-weight:700;color:var(--chord)}
+.fbBand .leyenda{margin:0}
+.fbBand #escalaTit,.fbBand #acordeTit{overflow:hidden;text-overflow:ellipsis}
+#acordeCtl{display:flex;flex-direction:column;gap:5px;max-height:170px;overflow-y:auto;padding-top:2px}
+.acctl{display:flex;flex-direction:row;align-items:center;gap:5px;color:var(--txt);font-size:12px}
+.acctl.modo{flex-direction:column;align-items:stretch;gap:2px;color:var(--mut)}
+.acctl select{flex:1;min-width:0;width:100%;font-size:12px;padding:0 4px;height:22px}
+.acctl .nm{min-width:30px;font-weight:700}
+/* Notas objetivo que se iluminan: verde al empezar el compás, amarillo en el último tiempo (pasos que acaban en 1, 3 o 5) */
+.nh.stg{stroke:#fff;stroke-width:3}
+.nh.ext{stroke-dasharray:4 3}
+.simn{fill:rgba(255,79,216,.35);stroke:#ff4fd8;stroke-width:3;pointer-events:none}
+.cfg .sim{display:inline-flex;align-items:center;gap:8px;margin-left:auto}
+#btnSim.on{background:#ff4fd8;border-color:#ff4fd8;color:#000;font-weight:700}
+.cfg label.vs{flex-direction:row;align-items:center;gap:4px}
+.cfg label.vs input{width:90px;padding:0}
+@keyframes latido{0%,100%{stroke-width:3}50%{stroke-width:8}}
+/* solo se iluminan las notas del mástil de la escala (el del acorde no se ilumina) */
+[data-fase="inicio"] .stgi{stroke:#4cd08a;stroke-width:5;animation:latido .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #4cd08a)}
+[data-prev="1"] .nxg{stroke:#4aa3ff;stroke-width:5;animation:latido .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #4aa3ff)}
+[data-fase="fin"] .stgf{stroke:#ffd23f;stroke-width:5;animation:latido .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #ffd23f)}
+.fbBand #faseTxt{flex:1;text-align:center;font-weight:800;font-size:13px}
+#faseTxt.inicio{color:#4cd08a}
+#faseTxt.fin{color:#ffd23f}
+#faseTxt.prox{color:#4aa3ff}
+.cfg .pos{display:inline-flex;align-items:center;gap:6px}
+.checks{display:inline-flex;gap:4px}
+.checks label{padding:2px 6px;font-size:12px;flex-direction:row}
+#resumen{font-size:15px}
+main{padding:8px 12px;max-width:1500px}
+.card{padding:8px}
+.top{grid-template-columns:clamp(340px,28vw,400px) minmax(320px,1.2fr) minmax(300px,1.2fr);gap:8px;align-items:start}
+@media(max-width:1150px){.top{grid-template-columns:clamp(340px,40vw,400px) 1fr}}
+@media(max-width:800px){.top{grid-template-columns:1fr}}
+body.enPistas #chart{display:none!important}
+.row{margin-top:5px;gap:5px}
+button,select,input,textarea{padding:3px 8px;font-size:13px}
+#contador{min-height:0}
+#acordeActual{font-size:54px}
+#acordeSig{font-size:14px;margin-top:2px}
+#posBadge{font-size:16px;margin-top:4px}
+#posBadge small{font-size:11px}
+#compas{margin-top:4px;font-size:13px}
+#tiempos{gap:6px;margin-top:5px}
+#tiempos span{width:32px;height:32px;font-size:16px}
+#aviso{min-height:22px;margin-top:4px;font-size:14px}
+#aviso.nuevo{font-size:15px;padding:2px 8px}
+.tabs{margin:6px 0 4px}
+.tabs button{padding:4px 14px}
+#vistaPractica .card{margin-top:6px!important}
+#vistaPractica>.card:first-child{margin-top:0!important}
+.cfg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:0}
+.cfg label{flex-direction:row;align-items:center;gap:5px;font-size:12px}
+.cfg input[type=number]{width:60px}
+#vistaPractica>.card:first-child .row{margin-top:4px}
+label{font-size:11px;gap:1px}
+label input,label select,label textarea{font-size:13px}
+#fretWrap{margin-top:4px}
+#posInfo{font-size:14px;margin-bottom:2px}
+#fret svg,#fretChord svg{display:block;margin:0;width:100%;height:auto;min-width:0}
+#fretScroll{overflow-x:visible}
+.fb{position:relative}
+.fbTitle{position:absolute;left:34px;top:1px;z-index:2;font-size:12px;color:var(--mut);white-space:nowrap}
+.fbTitle b{color:var(--txt)}
+.nh.nt{stroke:var(--accent);stroke-width:3.5}
+.tx,.txc{font-size:10px}
+.leyenda{margin-top:2px;gap:10px;font-size:11px}
+.chart .cbar{padding:14px 8px 4px;font-size:16px;min-height:42px}
+.chart .crow{margin-bottom:3px}
+#vueltasBar{margin-bottom:6px}
+/* ================= MODO MÓVIL (horizontal) =================
+   Se activa solo en pantallas pequeñas (body.movil). Práctica: vídeo a la izquierda, contador arriba y los dos mástiles
+   ampliados a la posición debajo. El botón ⚙ (body.ajustes) vuelve a la pantalla normal con pista, posiciones, etapas, etc. */
+#btnAjustes,#girar{display:none}
+body.movil #btnAjustes{display:flex;position:fixed;bottom:10px;right:10px;z-index:60;width:42px;height:42px;border-radius:50%;align-items:center;justify-content:center;font-size:22px;padding:0;background:var(--panel2);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+@media (orientation:portrait){
+  body.movil #girar{display:flex;position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--txt);align-items:center;justify-content:center;text-align:center;font-size:26px;font-weight:700;line-height:1.5}
+}
+body.movil:not(.ajustes){overflow:hidden}
+body.movil:not(.ajustes) header,
+body.movil:not(.ajustes) .tabs,
+body.movil:not(.ajustes) #chart,
+body.movil:not(.ajustes) #vistaPistas,
+body.movil:not(.ajustes) #vistaPractica>.card:first-child,
+body.movil:not(.ajustes) #mini,
+body.movil:not(.ajustes) #acordeCtl,
+body.movil:not(.ajustes) #ajusteInicio,
+body.movil:not(.ajustes) .inicioInfo,
+body.movil:not(.ajustes) #errPlayer,
+body.movil:not(.ajustes) #avisoFile,
+body.movil:not(.ajustes) .fbBand .leyenda,
+body.movil:not(.ajustes) .fbBand #posInfo{display:none!important}
+body.movil:not(.ajustes) main{display:grid;grid-template-columns:minmax(190px,27%) 1fr 1fr;gap:6px;padding:4px;max-width:none;height:100dvh;align-content:start}
+body.movil:not(.ajustes) .top,body.movil:not(.ajustes) #vistaPractica{display:contents}
+body.movil:not(.ajustes) .top>.card:first-child{grid-column:1;grid-row:1 / span 2;margin:0}
+body.movil:not(.ajustes) #contador{grid-column:2 / span 2;grid-row:1;margin:0!important}
+body.movil:not(.ajustes) #cardEscala{grid-column:2;grid-row:2;margin:0!important}
+body.movil:not(.ajustes) #cardAcorde{grid-column:3;grid-row:2;margin:0!important}
+body.movil:not(.ajustes) .card{padding:5px 6px}
+body.movil:not(.ajustes) #velocidades button{padding:8px 12px;font-size:15px}
+body.movil:not(.ajustes) #velocidades{justify-content:center}
+body.movil:not(.ajustes) #velocidades span{display:none}
+body.movil:not(.ajustes) #playerBox{width:100%}
+/* contador compacto: acorde | posición | tiempos, y debajo el siguiente, el compás y el aviso */
+body.movil:not(.ajustes) #contador{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"ac pos beats" "sig comp beats" "aviso aviso aviso";align-items:center;text-align:left;gap:1px 14px;min-height:0;padding:6px 12px}
+body.movil:not(.ajustes) #acordeActual{grid-area:ac;font-size:50px}
+body.movil:not(.ajustes) #acordeSig{grid-area:sig;font-size:13px;margin:0}
+body.movil:not(.ajustes) #posBadge{grid-area:pos;font-size:17px;margin:0;text-align:left}
+body.movil:not(.ajustes) #posBadge small{display:none}
+body.movil:not(.ajustes) #compas{grid-area:comp;font-size:12px;margin:0}
+body.movil:not(.ajustes) #tiempos{grid-area:beats;margin:0}
+body.movil:not(.ajustes) #tiempos span{width:34px;height:34px;font-size:17px}
+body.movil:not(.ajustes) #aviso{grid-area:aviso;margin:2px 0 0;min-height:0;font-size:13px}
+body.movil:not(.ajustes) #aviso.nuevo{font-size:14px;padding:2px 8px}
+body.movil:not(.ajustes) #aviso:empty{display:none}
+/* mástiles ampliados, uno al lado del otro */
+body.movil:not(.ajustes) .fgrid{grid-template-columns:minmax(0,1fr)}
+body.movil:not(.ajustes) .fbBand{left:6px;right:2px;font-size:11px;gap:8px}
+body.movil:not(.ajustes) .fbBand #faseTxt{font-size:12px}
+body.movil:not(.ajustes) #fret svg,body.movil:not(.ajustes) #fretChord svg{width:100%;height:auto}
+body.movil:not(.ajustes) .tx,body.movil:not(.ajustes) .txc{font-size:12px}
+body.movil:not(.ajustes) .fnum{font-size:12px}
+@media (max-width:700px){ body.movil:not(.ajustes) main{grid-template-columns:minmax(150px,24%) 1fr 1fr} body.movil:not(.ajustes) #acordeActual{font-size:40px} }
+#ajusteInicio{gap:3px}
+#ajusteInicio .lado{gap:2px}
+#ajusteInicio button{padding:2px 3px;font-size:10px;min-width:0}
+#ajusteInicio #nAqui{font-size:11px;padding:3px 6px}
+#escPanel{margin-top:2px}
+#vueltasBar{gap:5px;font-size:12px}
+.err,.msg{font-size:12px}
+
+/* ---- Panel de acordes: tarjetas de la línea de compases (se iluminan al tocarles) ---- */
+#acordeActual,#acordeSig,#posBadge{display:none!important}                      /* el acorde y la posición ya se ven en las tarjetas y en el mástil */
+body:not(.enPistas) #ajusteInicio,body:not(.enPistas) .inicioInfo{display:none}  /* el ajuste del inicio está en la pestaña Pistas */
+#tira{display:flex;gap:6px;position:relative}
+#tira .tc{flex:1 1 0;min-width:0;border:2px solid var(--line);border-radius:10px;padding:4px 5px;background:var(--panel2);opacity:.65;transition:opacity .15s,border-color .15s}
+#tira .tc.act{opacity:1;border-color:var(--chord);box-shadow:0 0 0 2px rgba(74,163,255,.3)}
+#tira .tc small{display:block;font-size:10px;color:var(--mut);text-align:left;line-height:1}
+#tira .tcs{display:flex;gap:4px}
+#tira .tcc{flex:1 1 0;min-width:0;border-radius:6px;padding:1px 2px}
+#tira .tcc.ca{background:rgba(74,163,255,.22)}
+#tira .nm{font-size:22px;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap}
+#tira .tc.act .tcc.ca .nm{color:var(--chord)}
+#tira .tcs .nm{font-size:17px}
+#tira .mini svg{display:block;width:100%;height:auto;max-height:110px;margin:2px auto 0}
+#contador #compas{font-size:12px;margin-top:4px}
+#contador #tiempos{margin-top:6px}
+body.movil:not(.ajustes) #contador{grid-template-areas:"tira beats" "comp beats" "aviso aviso";grid-template-columns:1fr auto;text-align:left}
+body.movil:not(.ajustes) #tira{grid-area:tira}
+body.movil:not(.ajustes) #tira .mini{display:none}
+body.movil:not(.ajustes) #tira .tc{padding:2px 4px}
+body.movil:not(.ajustes) #tira .nm{font-size:20px}
+body.movil:not(.ajustes) #tira .tcs .nm{font-size:15px}
+/* móvil: los mástiles ocupan exactamente el alto que queda y se ven enteros */
+body.movil:not(.ajustes) main{grid-template-rows:auto minmax(0,1fr);align-content:stretch}
+body.movil:not(.ajustes) .fcard{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+body.movil:not(.ajustes) .fcard .fgrid{flex:1;min-height:0;grid-template-rows:minmax(0,1fr)}
+body.movil:not(.ajustes) .fcard .fb{height:100%;min-height:0}
+body.movil:not(.ajustes) #fret,body.movil:not(.ajustes) #fretChord{height:100%}
+body.movil:not(.ajustes) #fret svg,body.movil:not(.ajustes) #fretChord svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+<button id="btnAjustes" type="button" title="Ajustes: pista, posiciones, plan de etapas, simulación">⚙</button>
+<div id="girar">↻<br>Gira el móvil<br>a horizontal</div>
+<header>
+  <h1>Escalas de guitarra por todo el mástil</h1>
+  <div id="resumen">Elige o crea una pista para empezar.</div>
+</header>
+<div id="avisoFile">
+  Estás abriendo el archivo directamente (<code>file://</code>) y YouTube suele rechazarlo (error 153).
+  En esta carpeta ejecuta <code>python -m http.server 8000</code> y abre <code>http://localhost:8000</code>.
+</div>
+
+<main>
+  <div class="top">
+    <div class="card">
+      <div id="playerBox"><div id="player"></div></div>
+      <div class="row" id="velocidades">
+        <span style="color:var(--mut)">Velocidad:</span>
+        <button data-r="0.5">0,5x</button><button data-r="0.75">0,75x</button><button data-r="1" class="on">1x</button>
+      </div>
+      <div class="inicioInfo" style="text-align:center;margin-top:4px;color:var(--mut);font-size:12px">Inicio compás 1: <b id="inicioTxt" style="color:var(--txt)"></b> · ajuste en milisegundos</div>
+      <div id="ajusteInicio">
+        <div class="lado" style="justify-content:flex-end">
+          <button data-n="-0.5" title="−0,5 s">−500</button><button data-n="-0.1" title="−0,1 s">−100</button><button data-n="-0.02" title="−0,02 s">−20</button><button data-n="-0.01" title="−0,01 s">−10</button><button data-n="-0.005" title="−0,005 s">−5</button>
+        </div>
+        <button id="nAqui" class="primary" title="Pausa el vídeo justo en el primer tiempo del compás 1 y pulsa aquí">Inicio = aquí</button>
+        <div class="lado" style="justify-content:flex-start">
+          <button data-n="0.005" title="+0,005 s">+5</button><button data-n="0.01" title="+0,01 s">+10</button><button data-n="0.02" title="+0,02 s">+20</button><button data-n="0.1" title="+0,1 s">+100</button><button data-n="0.5" title="+0,5 s">+500</button>
+        </div>
+      </div>
+      <div class="msg err" id="errPlayer"></div>
+    </div>
+    <div class="card" id="contador">
+      <div id="flash"></div>
+      <div id="tira"></div>
+      <div id="acordeActual">—</div>
+      <div id="acordeSig"></div>
+      <div id="posBadge"></div>
+      <div id="compas">Pulsa play en el vídeo</div>
+      <div id="tiempos"></div>
+      <div id="aviso"></div>
+    </div>
+    <!-- progresión, vueltas y escalas por acorde (solo en la pestaña Práctica) -->
+    <div class="card chart" id="chart" style="display:none">
+      <div id="vueltasBar"></div>
+      <div id="chartRows"></div>
+      <div id="escPanel"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabPractica" class="on">Práctica</button>
+    <button id="tabPistas">Pistas</button>
+  </div>
+
+  <!-- PRÁCTICA -->
+  <section id="vistaPractica">
+    <div class="card">
+      <div class="cfg">
+        <label>Pista <select id="selPista"></select></label>
+        <label title="Compases por posición">Compases <input type="number" id="inpBars" min="1" max="64" value="16"></label>
+        <label>Notas
+          <select id="selNombres" title="Nombres de notas"><option value="letras">C-D-E</option><option value="solfeo">Do-Re-Mi</option></select>
+        </label>
+        <label>Etiqueta
+          <select id="selEtiqueta" title="Etiqueta en el mástil"><option value="grado">Grado</option><option value="nota">Nota</option></select>
+        </label>
+        <span class="pos"><span style="color:var(--mut);font-size:12px">Posiciones:</span>
+          <span class="checks" id="checksPos"></span>
+          <button id="btnTodas">Todas</button></span>
+        <span class="sim">
+          <button id="btnSim" type="button" title="Toca con un sonido de guitarra 3 notas por compás con la escala: empieza y termina donde pide el ejercicio de la etapa">🎸 Simulación: no</button>
+          <label class="vs" title="Volumen de la simulación">vol <input type="range" id="volSim" min="0" max="100" value="60"></label>
+        </span>
+      </div>
+    </div>
+
+    <!-- Rectángulo de la ESCALA: mástil + posición siguiente -->
+    <div class="card fcard" id="cardEscala" style="margin-top:12px">
+      <div class="fgrid">
+        <div class="fb">
+          <div class="fbBand">
+            <span id="escalaTit"></span>
+            <span id="faseTxt"></span>
+            <span id="posInfo"></span>
+            <span class="leyenda">
+              <span><i style="border:2px solid var(--scale)"></i>Escala</span>
+              <span><i style="background:var(--chord)"></i>Acorde</span>
+              <span><i style="background:var(--root)"></i>Fundamental</span>
+              <span><i style="background:var(--chord);outline:3px solid #fff;outline-offset:-1px"></i>Objetivo</span>
+            </span>
+          </div>
+          <div id="fret"></div>
+        </div>
+        <div id="mini"></div>
+      </div>
+    </div>
+
+    <!-- Rectángulo del ACORDE: mástil + definición (modo y posición de cada acorde) -->
+    <div class="card fcard" id="cardAcorde">
+      <div class="fgrid">
+        <div class="fb">
+          <div class="fbBand"><span id="acordeTit"></span></div>
+          <div id="fretChord"></div>
+        </div>
+        <div id="acordeCtl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PISTAS -->
+  <section id="vistaPistas" style="display:none">
+    <div class="card">
+      <h3 style="margin:0 0 10px" id="formTitulo">Nueva pista</h3>
+      <form id="form" class="formgrid" autocomplete="off">
+        <label class="wide">Enlace de YouTube
+          <span style="display:flex;gap:8px"><input id="fUrl" style="flex:1" placeholder="https://www.youtube.com/watch?v=..."><button type="button" id="fCargar">Cargar vídeo</button></span>
+        </label>
+        <label>Título <input id="fTitulo"></label>
+        <label>Tonalidad <select id="fKey"></select></label>
+        <label>Escala
+          <select id="fEscala">
+            <option value="mayor">Mayor</option><option value="menor">Menor natural</option>
+            <option value="pentMayor">Pentatónica mayor</option><option value="pentMenor">Pentatónica menor</option>
+            <option value="bluesMenor">Blues menor</option><option value="bluesMayor">Blues mayor</option>
+            <option value="dorica">Dórica</option><option value="frigia">Frigia</option><option value="lidia">Lidia</option>
+            <option value="mixolidia">Mixolidia</option><option value="locria">Locria</option>
+          </select>
+        </label>
+        <label>Tempo (BPM)
+          <span style="display:flex;gap:8px"><input id="fBpm" type="number" min="30" max="300" step="0.1" style="width:100px"><button type="button" id="fTap" class="primary">Marcar tempo</button></span>
+          <small id="tapInfo">Pulsa al ritmo del pulso mientras suena la pista (3 pulsos o más).</small>
+        </label>
+        <label>Compás
+          <select id="fBeats"><option value="2">2/4</option><option value="3">3/4</option><option value="4" selected>4/4</option><option value="5">5/4</option><option value="6">6/4</option></select>
+        </label>
+        <label>Segundo en que empieza el compás 1
+          <span style="display:flex;gap:6px;flex-wrap:wrap">
+            <input id="fStart" type="number" min="0" step="0.01" value="0" style="width:100px">
+            <button type="button" id="fAhora" title="Usa el instante actual del vídeo">Aquí</button>
+            <button type="button" id="fM">−0,05</button><button type="button" id="fP">+0,05</button>
+          </span>
+        </label>
+        <div class="wide">
+          <div style="font-size:12px;color:var(--mut)">Progresión: cada caja es un compás (se repite en bucle). Para dos acordes en un compás usa «+ 2.º acorde». El bajo es opcional (C/G).</div>
+          <div id="progBoxes"></div>
+          <div class="row">
+            <button type="button" id="pbAdd">+ Compás</button>
+            <button type="button" id="pbAdd4">+ 4 compases</button>
+            <button type="button" id="pbClear">Vaciar</button>
+          </div>
+          <div style="font-size:12px;color:var(--mut);margin-top:10px">Vista previa (4 compases por línea):</div>
+          <div id="progChart" class="chart" style="margin-top:4px"></div>
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;color:var(--mut);font-size:13px">Escribir o pegar como texto (avanzado)</summary>
+            <textarea id="fProg" style="width:100%;margin-top:6px" placeholder="G | Em | C | D/F# | % "></textarea>
+            <div class="row"><button type="button" id="pbApply">Pasar el texto a cajitas</button></div>
+            <small style="color:var(--mut)">Compases separados por | o por líneas. % repite el acorde anterior. Dos acordes en un compás separados por espacio.</small>
+          </details>
+        </div>
+        <div class="wide row" style="margin-top:0">
+          <button class="primary" type="submit" id="fGuardar">Guardar pista</button>
+          <button type="button" id="fCancelar">Limpiar formulario</button>
+        </div>
+      </form>
+      <div class="msg" id="fMsg"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="row" style="margin-top:0">
+        <h3 style="margin:0;flex:1">Mis pistas</h3>
+        <button id="btnExport">Exportar JSON</button>
+        <button id="btnImport">Importar JSON</button>
+        <button id="btnPegar">Pegar texto</button>
+        <input type="file" id="fileImport" style="display:none">
+      </div>
+      <div id="pegarBox" style="display:none;margin-top:8px">
+        <p class="meta" style="margin:0 0 6px">Pega aquí el contenido del JSON (copiado de un mensaje o correo) y pulsa «Importar».</p>
+        <textarea id="pegarTxt" rows="5" style="width:100%" placeholder='{"version":1,"pistas":[…]}'></textarea>
+        <div class="row"><button id="pegarOk" class="primary">Importar</button><button id="pegarNo">Cancelar</button></div>
+      </div>
+      <div id="lista"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+// =====================================================================
+// ===== MOTOR TEÓRICO (sin DOM; se puede probar con Node) ==============
+// =====================================================================
+const OPEN_MIDI = [40, 45, 50, 55, 59, 64];   // cuerdas 6ª..1ª (E A D G B E)
+const MAX_FRET = 22;
+const SHAPES = ['E', 'D', 'C', 'A', 'G'];     // orden CAGED ascendente en el mástil
+
+const SCALES = {
+  // off = semitonos entre la fundamental del modo y su mayor padre (para las posiciones CAGED)
+  mayor:     { nombre: 'mayor',              corto: 'jónica',     iv: [0, 2, 4, 5, 7, 9, 11], off: 0 },
+  dorica:    { nombre: 'dórica',             corto: 'dórica',     iv: [0, 2, 3, 5, 7, 9, 10], off: 2 },
+  frigia:    { nombre: 'frigia',             corto: 'frigia',     iv: [0, 1, 3, 5, 7, 8, 10], off: 4 },
+  lidia:     { nombre: 'lidia',              corto: 'lidia',      iv: [0, 2, 4, 6, 7, 9, 11], off: 5 },
+  mixolidia: { nombre: 'mixolidia',          corto: 'mixolidia',  iv: [0, 2, 4, 5, 7, 9, 10], off: 7 },
+  menor:     { nombre: 'menor natural',      corto: 'eolia',      iv: [0, 2, 3, 5, 7, 8, 10], off: 9 },
+  locria:    { nombre: 'locria',             corto: 'locria',     iv: [0, 1, 3, 5, 6, 8, 10], off: 11 },
+  pentMayor: { nombre: 'pentatónica mayor',  corto: 'pent. mayor', iv: [0, 2, 4, 7, 9],        penta: true },
+  pentMenor: { nombre: 'pentatónica menor',  corto: 'pent. menor', iv: [0, 3, 5, 7, 10],       penta: true },
+  // Blues = pentatónica + nota de paso; usa las mismas 5 cajas que su pentatónica
+  bluesMenor: { nombre: 'blues menor',       corto: 'blues menor', iv: [0, 3, 5, 6, 7, 10],    blues: true, menor: true },
+  bluesMayor: { nombre: 'blues mayor',       corto: 'blues mayor', iv: [0, 2, 3, 4, 7, 9],     blues: true, menor: false }
+};
+const esCajas = id => !!(SCALES[id].penta || SCALES[id].blues);   // se numera por cajas
+const CHORDS = {
+  '':     { iv: [0, 4, 7] },
+  'm':    { iv: [0, 3, 7] },
+  '7':    { iv: [0, 4, 7, 10] },
+  'maj7': { iv: [0, 4, 7, 11] },
+  'm7':   { iv: [0, 3, 7, 10] },
+  'm7b5': { iv: [0, 3, 6, 10] },
+  'dim':  { iv: [0, 3, 6] }
+};
+const CHORD_ALIAS = {
+  '': '', 'maj': '', 'M': '', 'm': 'm', 'min': 'm', '-': 'm', '7': '7', 'dom7': '7',
+  'maj7': 'maj7', 'M7': 'maj7', 'Δ': 'maj7', 'Δ7': 'maj7',
+  'm7': 'm7', 'min7': 'm7', '-7': 'm7',
+  'm7b5': 'm7b5', 'm7-5': 'm7b5', 'ø': 'm7b5', 'ø7': 'm7b5',
+  'dim': 'dim', 'o': 'dim', '°': 'dim'
+};
+const DEGREE_NAMES = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
+const NAMES = {
+  letras: { sos: ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'], bem: ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'] },
+  solfeo: { sos: ['Do','Do#','Re','Re#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si'], bem: ['Do','Reb','Re','Mib','Mi','Fa','Solb','Sol','Lab','La','Sib','Si'] }
+};
+const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11, Do: 0, Re: 2, Mi: 4, Fa: 5, Sol: 7, La: 9, Si: 11 };
+const SOLFEO_OF = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'Sol', A: 'La', B: 'Si' };
+
+const mod12 = n => ((n % 12) + 12) % 12;
+
+// ¿La tonalidad se escribe con bemoles? (por su mayor relativo)
+function usaBemoles(tonicPc, scaleId) {
+  const sc = SCALES[scaleId];
+  const rel = sc.off !== undefined ? mod12(tonicPc - sc.off)
+    : (scaleId === 'pentMenor' || scaleId === 'bluesMenor') ? mod12(tonicPc + 3) : tonicPc;
+  return [1, 3, 5, 6, 8, 10].includes(rel);
+}
+function noteName(pc, flats, nombres) {
+  return NAMES[nombres || 'letras'][flats ? 'bem' : 'sos'][mod12(pc)];
+}
+function degreeName(tonicPc, pc) { return DEGREE_NAMES[mod12(pc - tonicPc)]; }
+
+function scalePcs(tonicPc, scaleId) { return SCALES[scaleId].iv.map(i => mod12(tonicPc + i)); }
+function chordNotes(rootPc, quality) {
+  return CHORDS[quality].iv.map(i => ({ pc: mod12(rootPc + i), degree: DEGREE_NAMES[i] }));
+}
+
+// Pentatónica en 5 cajas. Cada caja = 12 notas consecutivas de la pentatónica,
+// 2 por cuerda. Caja 1 empieza en la tónica en la 6.ª cuerda; la caja k empieza
+// en el grado k de la pentatónica. Se toma la colocación más grave posible (trastes >= 0).
+function pentaBoxes(tonicPc, mayor) {
+  const iv = mayor ? SCALES.pentMayor.iv : SCALES.pentMenor.iv;
+  const boxes = [];
+  for (let k = 0; k < 5; k++) {
+    for (let oct = 1; oct <= 5; oct++) {
+      const base = tonicPc + 12 * oct;
+      const notes = [];
+      let ok = true;
+      for (let j = 0; j < 12; j++) {
+        const idx = k + j;
+        const midi = base + 12 * Math.floor(idx / 5) + iv[idx % 5];
+        const s = Math.floor(j / 2), f = midi - OPEN_MIDI[s];
+        if (f < 0 || f > MAX_FRET) { ok = false; break; }
+        notes.push({ s, f, pc: mod12(midi) });
+      }
+      if (ok) {
+        const frets = notes.map(n => n.f);
+        boxes.push({ box: k + 1, notes, lo: Math.min(...frets), hi: Math.max(...frets) });
+        break;
+      }
+    }
+  }
+  return boxes;
+}
+
+function notesInWindow(pcs, lo, hi) {
+  const out = [];
+  for (let s = 0; s < 6; s++)
+    for (let f = lo; f <= hi; f++) {
+      const pc = mod12(OPEN_MIDI[s] + f);
+      if (pcs.includes(pc)) out.push({ s, f, pc });
+    }
+  return out;
+}
+
+// Posiciones de una escala.
+//  - Pentatónicas: 5 cajas, id = nº de caja (caja 1 = tónica en 6.ª cuerda).
+//  - Mayor / menor natural: 5 posiciones CAGED (la menor usa las del mayor relativo,
+//    mismas notas). Se numeran de la más grave (1) a la más aguda (5).
+// Cada posición: { id, label, shape, lo, hi, notes:[{s,f,pc}] }  (s: 0 = 6.ª cuerda)
+function getPositions(tonicPc, scaleId) {
+  const sc = SCALES[scaleId];
+  if (sc.penta) {
+    return pentaBoxes(tonicPc, scaleId === 'pentMayor').map(b => ({
+      id: b.box, label: 'Posición ' + b.box, shape: null, lo: b.lo, hi: b.hi, notes: b.notes
+    }));
+  }
+  if (sc.blues) {
+    const pcs = scalePcs(tonicPc, scaleId);
+    return pentaBoxes(tonicPc, !sc.menor).map(b => ({
+      id: b.box, label: 'Posición ' + b.box, shape: null, lo: b.lo, hi: b.hi, notes: notesInWindow(pcs, b.lo, b.hi)
+    }));
+  }
+  const relMajor = mod12(tonicPc - sc.off);          // los modos usan las posiciones de su mayor padre
+  const pcs = scalePcs(tonicPc, scaleId);
+  const list = pentaBoxes(relMajor, true).map((b, i) => ({ shape: SHAPES[i], lo: b.lo, hi: b.hi }));
+  list.sort((a, b) => a.lo - b.lo || a.hi - b.hi);
+  return list.map((p, i) => ({
+    id: i + 1, label: 'Posición ' + (i + 1), shape: p.shape, lo: p.lo, hi: p.hi,
+    notes: notesInWindow(pcs, p.lo, p.hi)
+  }));
+}
+// Orden de práctica: de la más grave a la más aguda del mástil.
+function orderForPractice(positions, ids) {
+  return positions.filter(p => ids.includes(p.id)).sort((a, b) => a.lo - b.lo || a.hi - b.hi);
+}
+// Notas del acorde dentro de la ventana de trastes de una posición.
+function chordInPosition(pos, chord) {
+  const out = [];
+  for (let s = 0; s < 6; s++)
+    for (let f = pos.lo; f <= pos.hi; f++) {
+      const pc = mod12(OPEN_MIDI[s] + f);
+      const cn = chord.notes.find(n => n.pc === pc);
+      if (cn) out.push({ s, f, pc, degree: cn.degree, root: pc === chord.rootPc });
+    }
+  return out;
+}
+// ---- Escala por acorde ----
+const MODE_IDS = ['mayor', 'dorica', 'frigia', 'lidia', 'mixolidia', 'menor', 'locria'];
+const EXTRA_IDS = ['pentMayor', 'pentMenor', 'bluesMenor', 'bluesMayor'];
+// Pentatónicas y blues que se aceptan "de estilo" aunque no contengan todas las notas del acorde.
+const STYLE_OK = {
+  '': ['pentMayor', 'bluesMayor'], 'm': ['pentMenor', 'bluesMenor'],
+  '7': ['pentMayor', 'pentMenor', 'bluesMenor', 'bluesMayor'], 'maj7': ['pentMayor'],
+  'm7': ['pentMenor', 'bluesMenor'], 'm7b5': [], 'dim': []
+};
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+// Escalas con la fundamental del acorde que contienen todas sus notas (+ las "de estilo").
+function compatibleScales(chord) {
+  const need = chord.notes.map(n => n.pc);
+  const strict = [...MODE_IDS, ...EXTRA_IDS].filter(id => {
+    const pcs = scalePcs(chord.rootPc, id);
+    return need.every(p => pcs.includes(p));
+  });
+  return [...strict, ...STYLE_OK[chord.quality].filter(id => !strict.includes(id))];
+}
+// Escala sugerida: el modo de la tonalidad que cae sobre ese acorde; si no, una por tipo de acorde.
+function suggestedScale(chord, keyPc, keyScaleId) {
+  const cands = compatibleScales(chord);
+  const ks = SCALES[keyScaleId];
+  if (ks.off !== undefined) {
+    const keyPcs = scalePcs(keyPc, keyScaleId);
+    const m = cands.find(id => MODE_IDS.includes(id) && sameSet(scalePcs(chord.rootPc, id), keyPcs));
+    if (m) return m;
+  }
+  const pref = { '': 'mayor', 'm': 'dorica', '7': 'mixolidia', 'maj7': 'mayor', 'm7': 'dorica', 'm7b5': 'locria', 'dim': 'locria' }[chord.quality];
+  return cands.includes(pref) ? pref : cands[0];
+}
+
+// Posiciones del propio acorde (zonas del mástil donde se toca): las 5 posiciones CAGED de la escala
+// mayor (o menor natural, si el acorde es menor) con la fundamental del acorde. Se ordenan por altura.
+function chordPositions(chord) {
+  const minorish = ['m', 'm7', 'm7b5', 'dim'].includes(chord.quality);
+  return getPositions(chord.rootPc, minorish ? 'menor' : 'mayor');
+}
+const chordKey = c => c.rootPc + ':' + c.quality;     // clave del acorde (sin bajo) para guardar su posición fija
+
+// Ejercicio de una etapa: dónde empieza y dónde termina cada compás. Cada uno vale:
+//  '1' (fundamental), '3' (tercera), '5' (quinta), '135' (cualquiera de las tres); "termina" también puede ir vacío (sin final fijo).
+const DEG_SETS = { '1': ['1'], '3': ['3', 'b3'], '5': ['5', 'b5'], '135': ['1', '3', 'b3', '5', 'b5'] };
+// Notas del acorde dentro de la posición donde se puede empezar y donde se puede terminar.
+function targetSets(pos, chord, ej) {
+  const cn = chordInPosition(pos, chord);
+  const pick = k => k ? cn.filter(n => DEG_SETS[k].includes(n.degree)) : [];
+  return { start: pick(ej.empieza), end: pick(ej.termina) };
+}
+// ---- Simulación sonora: una frase de 3 notas por compás ----
+const midiOf = n => OPEN_MIDI[n.s] + n.f;
+const uniqByMidi = arr => {
+  const m = new Map();
+  arr.forEach(n => { if (!m.has(midiOf(n))) m.set(midiOf(n), n); });
+  return [...m.values()].sort((a, b) => midiOf(a) - midiOf(b));
+};
+// scaleNotes: notas de la escala dibujadas en la posición; startSet / endSet: notas del acorde donde puede empezar / terminar el compás
+// (endSet vacío = sin nota final fija). seed: cambia la frase de un compás a otro. Devuelve { start, mid, end } (notas {s,f,pc}).
+//  - start: una nota de startSet; end: la de endSet más cercana a start (o una nota de la escala a dos pasos, si no hay final fijo);
+//  - mid: una nota de la escala entre ambas (o junto a start si no cabe ninguna).
+function simNotes(scaleNotes, startSet, endSet, seed) {
+  const sc = uniqByMidi(scaleNotes), st = uniqByMidi(startSet), en = uniqByMidi(endSet);
+  if (!st.length && !sc.length) return null;
+  let start, end;
+  if (en.length && st.length) {
+    // parejas inicio/final cercanas (hasta 7 semitonos si es posible), ordenadas por cercanía; seed elige entre ellas
+    let pairs = [];
+    st.forEach(a => en.forEach(b => pairs.push([a, b, Math.abs(midiOf(a) - midiOf(b))])));
+    const near = pairs.filter(p => p[2] <= 7);
+    pairs = (near.length ? near : pairs.sort((x, y) => x[2] - y[2]).slice(0, 4))
+      .sort((x, y) => midiOf(x[0]) - midiOf(y[0]) || x[2] - y[2]);
+    [start, end] = pairs[seed % pairs.length];
+  } else start = st.length ? st[seed % st.length] : sc[seed % sc.length];
+  const ms = midiOf(start);
+  if (!end && en.length) end = en.slice().sort((a, b) => Math.abs(midiOf(a) - ms) - Math.abs(midiOf(b) - ms))[0];
+  if (!end) {
+    const i = Math.max(0, sc.findIndex(n => midiOf(n) >= ms));
+    const j = seed % 2 === 0 ? i + 2 : i - 2;
+    end = sc[Math.min(sc.length - 1, Math.max(0, j))] || start;
+  }
+  const me = midiOf(end), lo = Math.min(ms, me), hi = Math.max(ms, me);
+  let between = sc.filter(n => midiOf(n) > lo && midiOf(n) < hi);
+  let mid;
+  if (between.length) mid = between[Math.floor(between.length / 2)];
+  else {
+    const near = sc.filter(n => midiOf(n) !== ms).sort((a, b) => Math.abs(midiOf(a) - ms) - Math.abs(midiOf(b) - ms));
+    mid = near[0] || start;
+  }
+  return { start, mid, end };
+}
+
+// Ejercicio equivalente a un "paso" antiguo (1: fundamental; 2: 1, 3 o 5; 3: empezar y acabar en 1, 3 o 5).
+const PASO_A_EJ = { 1: { empieza: '1', termina: '' }, 2: { empieza: '135', termina: '' }, 3: { empieza: '135', termina: '135' } };
+
+// ---- Acordes y progresiones ----
+const ENGLISH_OF = Object.fromEntries(Object.entries(SOLFEO_OF).map(([k, v]) => [v, k]));
+const NOTE_RE = /^(Sol|Do|Re|Mi|Fa|La|Si|[A-G])([#b]?)$/;
+function parseNote(txt) {                       // "Bb", "Sol#" -> { pc, letter (C-G), acc }
+  const m = txt.match(NOTE_RE);
+  if (!m) return null;
+  const letter = ENGLISH_OF[m[1]] || m[1];
+  return { pc: mod12(LETTER_PC[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0)), letter, acc: m[2] };
+}
+// "Cm7", "G/B", "Sol7"...  El bajo (después de "/") es opcional.
+function parseChord(txt) {
+  const parts = txt.trim().split('/');
+  if (parts.length > 2) return null;
+  const m = parts[0].match(/^(Sol|Do|Re|Mi|Fa|La|Si|[A-G])([#b]?)(.*)$/);
+  if (!m) return null;
+  const q = CHORD_ALIAS[m[3]];
+  if (q === undefined) return null;
+  let bass = null;
+  if (parts.length === 2 && !(bass = parseNote(parts[1]))) return null;
+  const root = parseNote(m[1] + m[2]);
+  return { rootPc: root.pc, quality: q, letter: root.letter, acc: m[2], bass, notes: chordNotes(root.pc, q) };
+}
+function chordDisplay(chord, nombres) {
+  const nm = (l, a) => (nombres === 'solfeo' ? SOLFEO_OF[l] : l) + a;
+  return nm(chord.letter, chord.acc) + chord.quality + (chord.bass ? '/' + nm(chord.bass.letter, chord.bass.acc) : '');
+}
+function chordText(chord) {                     // texto canónico, para guardar
+  return chord.letter + chord.acc + chord.quality + (chord.bass ? '/' + chord.bass.letter + chord.bass.acc : '');
+}
+// Una "/" separa compases salvo que vaya seguida SOLO de una nota (bajo: C/G).
+const BAR_SLASH = /\/(?!(?:Sol|Do|Re|Mi|Fa|La|Si|[A-G])[#b]?(?=\s|\||\/|$))/g;
+// "G | Em | C D | D" -> { bars:[[chord,...],...], errors:[...] }
+function parseProgression(text, beatsPerBar) {
+  const bars = [], errors = [];
+  let prev = null;                                  // "%" repite el acorde anterior
+  text.replace(BAR_SLASH, '|').split(/[|\n]/).map(s => s.trim()).filter(Boolean).forEach((barTxt, i) => {
+    const chords = [];
+    barTxt.split(/\s+/).forEach(t => {
+      const c = t === '%' ? prev : parseChord(t);
+      if (c) { chords.push(c); prev = c; }
+      else errors.push(t === '%' ? `Compás ${i + 1}: "%" no tiene acorde anterior` : `Compás ${i + 1}: "${t}" no es un acorde válido`);
+    });
+    if (chords.length > beatsPerBar) errors.push(`Compás ${i + 1}: más acordes que tiempos`);
+    if (chords.length) bars.push(chords);
+  });
+  return { bars, errors };
+}
+function chordIndexAtBeat(nChords, beat, beatsPerBar) {      // beat: 1..beatsPerBar
+  return Math.min(nChords - 1, Math.floor((beat - 1) / (beatsPerBar / nChords)));
+}
+
+// ---- Plan de etapas ----
+// etapas: [{ vueltas, modo, bars?, paso? }]; cada etapa dura "vueltas" pasadas completas por la progresión
+// (progLen compases). bucle: al acabar la última se vuelve a la primera; si no, la última sigue hasta el final.
+// Devuelve la etapa de un compás y los compases transcurridos dentro de ella (barsInto, desde 0).
+function stageAt(etapas, bucle, progLen, bar) {
+  const lapNo = Math.floor(bar / progLen);
+  const total = etapas.reduce((a, e) => a + e.vueltas, 0);
+  const lap = bucle ? lapNo % total : lapNo;
+  let idx = 0, before = 0;
+  for (; idx < etapas.length - 1 && lap >= before + etapas[idx].vueltas; idx++) before += etapas[idx].vueltas;
+  return { idx, lapNo, lapInStage: lap - before, barsInto: (lap - before) * progLen + (bar % progLen) };
+}
+
+// ---- Tiempo de la pista -> compás y tiempo ----
+// t: segundos de la pista (ya tiene en cuenta la velocidad de reproducción)
+function locate(t, track) {
+  const beats = (t - track.startSec) * track.bpm / 60;
+  if (beats < 0) return { pre: true };
+  const bar = Math.floor(beats / track.beats);
+  return { pre: false, bar, beat: Math.floor(beats - bar * track.beats) + 1 };
+}
+// =====================================================================
+// ===== FIN MOTOR TEÓRICO ==============================================
+// =====================================================================
+</script>
+
+<script>
+// =====================================================================
+// ===== DIAGRAMA SVG DEL MÁSTIL ========================================
+// =====================================================================
+// o: {from,to,fw,sg,lo,hi,mini, scale:[{s,f,pc}], chord:[{s,f,pc,degree,root}], targets:[...],
+//     tonicPc, labelFn(kind, note) -> texto, tip(note) -> tooltip}
+function fretSvg(o) {
+  const first = Math.max(o.from, 1);
+  const padL = o.mini ? 6 : 30, padT = o.padT !== undefined ? o.padT : (o.mini ? 8 : 32);
+  const openW = o.from === 0 ? o.fw * 0.8 : 0;
+  const xNut = padL + openW;
+  const cx = f => f === 0 ? padL + openW / 2 : xNut + (f - first + 0.5) * o.fw;
+  const cy = s => padT + (5 - s) * o.sg;
+  const nFr = o.to - first + 1;
+  const W = xNut + nFr * o.fw + 8, H = padT + 5 * o.sg + (o.mini ? 16 : (o.noNums ? 12 : 32));
+  const yTop = padT - o.sg * 0.5, yBot = padT + 5.5 * o.sg;
+  const r = o.mini ? 4.5 : Math.min(13, o.sg * 0.42), rT = r * 1.28;
+  let g = '';
+  g += `<rect x="${padL}" y="${yTop}" width="${W - padL - 4}" height="${yBot - yTop}" fill="var(--wood)" rx="4"/>`;
+  // zona fija del acorde (azul), debajo de la ventana de práctica (naranja)
+  if (o.zone2) {
+    const z1 = o.zone2.lo <= first ? (o.zone2.lo === 0 ? padL : xNut) : xNut + (o.zone2.lo - first) * o.fw;
+    const z2 = xNut + (Math.min(o.zone2.hi, o.to) - first + 1) * o.fw;
+    g += `<rect x="${z1}" y="${yTop}" width="${z2 - z1}" height="${yBot - yTop}" fill="#4aa3ff" opacity=".22" rx="3"/>`;
+  }
+  // ventana de la posición
+  const x1 = o.lo <= first ? (o.lo === 0 ? padL : xNut) : xNut + (o.lo - first) * o.fw;
+  const x2 = xNut + (Math.min(o.hi, o.to) - first + 1) * o.fw;
+  g += `<rect x="${x1}" y="${yTop}" width="${x2 - x1}" height="${yBot - yTop}" fill="#ffb347" opacity=".24" rx="3"/>`;
+  if (o.label && !o.mini)
+    g += `<text x="${(x1 + x2) / 2}" y="${yTop - 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#ffb347">▼ ${o.label}</text>`;
+  // trastes y números
+  for (let i = 0; i <= nFr; i++) {
+    const x = xNut + i * o.fw;
+    g += `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="${i === 0 && o.from <= 1 ? '#ddd' : '#6a6f78'}" stroke-width="${i === 0 && o.from <= 1 ? 4 : 1.5}"/>`;
+  }
+  for (let f = first; f <= o.to; f++) {
+    if (!o.noNums && (!o.mini || f === o.lo || f === o.hi))
+      g += `<text class="fnum" x="${cx(f)}" y="${yBot + 14}">${f}</text>`;
+    if (!o.mini && [3, 5, 7, 9, 15, 17, 19, 21].includes(f))
+      g += `<circle cx="${cx(f)}" cy="${(cy(2) + cy(3)) / 2}" r="5" fill="#4b4338"/>`;
+    if (!o.mini && f === 12) {
+      g += `<circle cx="${cx(f)}" cy="${(cy(1) + cy(2)) / 2}" r="5" fill="#4b4338"/>`;
+      g += `<circle cx="${cx(f)}" cy="${(cy(3) + cy(4)) / 2}" r="5" fill="#4b4338"/>`;
+    }
+  }
+  // cuerdas
+  const sw = [2.6, 2.2, 1.8, 1.4, 1.1, 0.9], nm = ['E', 'A', 'D', 'G', 'B', 'E'];
+  for (let s = 0; s < 6; s++) {
+    g += `<line x1="${padL}" y1="${cy(s)}" x2="${W - 4}" y2="${cy(s)}" stroke="#b9b2a4" stroke-width="${sw[s]}"/>`;
+    if (!o.mini) g += `<text class="snm" x="${12}" y="${cy(s)}">${nm[s]}</text>`;
+  }
+  const inRange = n => n.f >= o.from && n.f <= o.to;
+  const key = n => n.s + ':' + n.f;
+  const tset = new Set((o.targets || []).map(key));
+  const sset = new Set((o.targetsStart || []).map(key)), eset = new Set((o.targetsEnd || []).map(key)), nset = new Set((o.targetsNext || []).map(key));
+  const tip = n => o.tip ? `<title>${o.tip(n)}</title>` : '';
+  // capa 1: escala (huecos)
+  (o.scale || []).filter(inRange).forEach(n => {
+    if (o.mini) {
+      const isRoot = n.pc === o.tonicPc;
+      g += `<circle cx="${cx(n.f)}" cy="${cy(n.s)}" r="${r}" fill="${isRoot ? 'var(--accent)' : 'var(--bg)'}" stroke="var(--scale)" stroke-width="1.5"/>`;
+    } else {
+      g += `<g>${tip(n)}<circle class="nh${n.pc === o.tonicPc ? ' nt' : ''}${o.glowTargets && tset.has(key(n)) ? ' stg' : ''}${o.glowTargets && sset.has(key(n)) ? ' stgi' : ''}${o.glowTargets && eset.has(key(n)) ? ' stgf' : ''}${o.glowTargets && nset.has(key(n)) ? ' nxg' : ''}" cx="${cx(n.f)}" cy="${cy(n.s)}" r="${r}"/>` +
+           `<text class="tx" x="${cx(n.f)}" y="${cy(n.s)}">${o.labelFn('scale', n)}</text></g>`;
+    }
+  });
+  // notas objetivo que no son de la escala (p. ej. la 3.ª de A7 en A blues menor): círculo discontinuo para poder iluminarlas
+  // (y las notas donde empieza el compás siguiente, que se anuncian en el último tiempo y pueden estar en otra zona)
+  if (o.glowTargets && !o.mini) {
+    const sk = new Set((o.scale || []).map(key)), extra = new Map();
+    [...(o.targets || []), ...(o.targetsNext || [])].forEach(n => { if (inRange(n) && !sk.has(key(n))) extra.set(key(n), n); });
+    extra.forEach(n => {
+      const k = key(n);
+      g += `<g>${tip(n)}<circle class="nh ext${tset.has(k) ? ' stg' : ''}${sset.has(k) ? ' stgi' : ''}${eset.has(k) ? ' stgf' : ''}${nset.has(k) ? ' nxg' : ''}" cx="${cx(n.f)}" cy="${cy(n.s)}" r="${r}"/>` +
+           `<text class="tx" x="${cx(n.f)}" y="${cy(n.s)}">${o.labelFn(tset.has(k) ? 'scale' : 'chord', n)}</text></g>`;
+    });
+  }
+  // capa 2: acorde (rellenos) y notas objetivo (más grandes)
+  (o.chord || []).filter(inRange).forEach(n => {
+    const isT = tset.has(key(n));
+    g += `<g>${tip(n)}<circle class="${n.root ? 'nr' : 'nc'}${isT ? ' tg' : ''}" cx="${cx(n.f)}" cy="${cy(n.s)}" r="${isT ? rT : r}"/>` +
+         `<text class="txc" x="${cx(n.f)}" y="${cy(n.s)}">${o.labelFn('chord', n)}</text></g>`;
+  });
+  // nota que está sonando en la simulación
+  if (o.sim && !o.mini && o.sim.f >= o.from && o.sim.f <= o.to)
+    g += `<circle class="simn" cx="${cx(o.sim.f)}" cy="${cy(o.sim.s)}" r="${r + 4}"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" ${o.mini ? `width="${W}" height="${H}"` : ''}>${g}</svg>`;
+}
+</script>
+
+<script>
+// =====================================================================
+// ===== APLICACIÓN ======================================================
+// =====================================================================
+const $ = id => document.getElementById(id);
+const KEY_PISTAS = 'guitarra.pistas.v1', KEY_AJ = 'guitarra.ajustes.v1';
+const KEY_PCS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- almacenamiento ----------
+function lsGet(k, def) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } }
+// Con lanzar.bat el servidor guarda además pistas y ajustes en datos.json (la carpeta de la app), así no dependen del navegador
+// (Edge puede borrar los datos de los sitios al cerrarse). En la web publicada (Netlify) no hay servidor y solo se usa el navegador.
+let servidorDatos = false;
+(function () {
+  if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || location.protocol !== 'http:') return;
+  try {
+    const x = new XMLHttpRequest(); x.open('GET', '/api/datos', false); x.send();
+    if (x.status !== 200) return;
+    const d = JSON.parse(x.responseText);
+    if (!d || typeof d !== 'object' || !Array.isArray(d.pistas)) return;
+    servidorDatos = true;
+    // si el archivo está vacío pero el navegador conserva pistas (versión anterior), se pasan al archivo
+    if (d.pistas.length || !lsGet(KEY_PISTAS, []).length) lsSet(KEY_PISTAS, d.pistas);
+    if (d.ajustes && typeof d.ajustes === 'object') lsSet(KEY_AJ, d.ajustes);
+  } catch (e) { /* sin servidor: solo navegador */ }
+})();
+let pistas = lsGet(KEY_PISTAS, []);
+let aj = Object.assign({ trackId: null, sel: [1, 2, 3, 4, 5], bars: 16, step: 1, nombres: 'letras', etiqueta: 'grado', rate: 1 }, lsGet(KEY_AJ, {}));
+let guardaTimer = 0;
+function guardaServidor() {
+  if (!servidorDatos) return;
+  clearTimeout(guardaTimer);
+  guardaTimer = setTimeout(() => {
+    fetch('/api/datos', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: 1, pistas, ajustes: aj }) })
+      .catch(() => {});
+  }, 300);
+}
+const savePistas = () => { lsSet(KEY_PISTAS, pistas); guardaServidor(); };
+const saveAj = () => { lsSet(KEY_AJ, aj); guardaServidor(); };
+if (servidorDatos) guardaServidor();   // migración inicial
+
+// ---------- utilidades de nombres ----------
+function keyName(pc, scaleId) { return noteName(pc, usaBemoles(pc, scaleId), aj.nombres); }
+function keyOptionLabel(pc) { return noteName(pc, pc !== 6, aj.nombres); }
+function getYtId(u) {
+  u = (u || '').trim();
+  if (/^[\w-]{11}$/.test(u)) return u;
+  const m = u.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ---------- reproductor ----------
+let player = null, playerReady = false, loadedVideo = null, pendingVideo = null;
+if (location.protocol === 'file:') $('avisoFile').style.display = 'block';
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady = function () {
+  player = new YT.Player('player', {
+    width: '100%', height: '100%',
+    playerVars: Object.assign({ playsinline: 1, rel: 0 }, location.protocol.startsWith('http') ? { origin: location.origin } : {}),
+    events: {
+      onReady: () => { playerReady = true; if (pendingVideo) loadVideo(pendingVideo); setRate(aj.rate, true); },
+      onStateChange: e => { if (e.data === 1) setRate(aj.rate, true); },
+      onPlaybackRateChange: e => { markRate(e.data); },
+      onError: e => {
+        const msg = { 2: 'Enlace de vídeo no válido.', 5: 'Error del reproductor HTML5.', 100: 'Vídeo no encontrado o privado.',
+          101: 'El propietario no permite insertar este vídeo.', 150: 'El propietario no permite insertar este vídeo.', 153: 'Error 153: abre la página desde http://localhost (servidor local), no con file://.' }[e.data];
+        $('errPlayer').textContent = msg || ('Error del reproductor (' + e.data + ')');
+      }
+    }
+  });
+};
+function loadVideo(id) {
+  if (!id) return;
+  if (!playerReady) { pendingVideo = id; return; }
+  if (loadedVideo === id) return;
+  $('errPlayer').textContent = '';
+  loadedVideo = id; pendingVideo = null;
+  player.cueVideoById(id);
+}
+const curTime = () => (playerReady && player.getCurrentTime) ? player.getCurrentTime() : 0;
+const isPlaying = () => playerReady && player.getPlayerState && player.getPlayerState() === 1;
+
+function setRate(r, quiet) {
+  aj.rate = r; if (!quiet) saveAj();
+  if (playerReady && player.getPlaybackRate() !== r) player.setPlaybackRate(r);
+  markRate(r);
+}
+function markRate(r) {
+  document.querySelectorAll('#velocidades button[data-r]').forEach(b => b.classList.toggle('on', parseFloat(b.dataset.r) === r));
+}
+document.querySelectorAll('#velocidades button[data-r]').forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
+
+// ---------- pista actual / posiciones ----------
+let progCache = { key: '', parsed: { bars: [], errors: [] } };
+const curTrack = () => pistas.find(p => p.id === aj.trackId) || null;
+function progOf(t) {
+  const k = t.id + '|' + t.prog + '|' + t.beats;
+  if (progCache.key !== k) progCache = { key: k, parsed: parseProgression(t.prog, t.beats) };
+  return progCache.parsed;
+}
+let posCache = { key: '', list: [] };
+function positionsOf(t) {
+  const k = t.key + '|' + t.scale;
+  if (posCache.key !== k) posCache = { key: k, list: getPositions(t.key, t.scale) };
+  return posCache.list;
+}
+
+// ---------- vista de lectura de la progresión (líneas de 4 compases) ----------
+const PER_LINE = 4;
+const showChord = t => { const c = parseChord(t); return c ? chordDisplay(c, aj.nombres) : t; };
+// bars: [[texto canónico de acorde, ...], ...]. Un acorde igual al anterior se muestra como %.
+// extra (opcional): (compás, acorde) -> html que se añade bajo cada acorde (el desplegable de escala).
+function chartHtml(bars, extra) {
+  let prev = null, h = '';
+  const cell = (i, last) => `<div class="cbar${last ? ' last' : ''}" data-b="${i}"><small>${i + 1}</small>` +
+    bars[i].map((t, j) => {
+      const rep = t === prev; prev = t;
+      return `<span class="ci">${rep ? '<span class="rep">%</span>' : esc(showChord(t))}${extra ? extra(i, j) : ''}</span>`;
+    }).join(' ') + '</div>';
+  for (let i = 0; i < bars.length; i += PER_LINE) {
+    const end = Math.min(i + PER_LINE, bars.length);
+    h += '<div class="crow">';
+    for (let k = i; k < i + PER_LINE; k++) h += k < end ? cell(k, k === end - 1) : '<div class="cbar empty"></div>';
+    h += '</div>';
+  }
+  return h;
+}
+// ---------- plan de etapas y escala por acorde ----------
+// t.etapas: [{ vueltas, modo: 'tonalidad'|'acordes', bars?, paso? }]. Cada etapa dura "vueltas" pasadas completas por la
+// progresión; bars = compases por posición y paso = paso de dificultad (si faltan, valen los generales de arriba).
+// Al acabar la última etapa se vuelve siempre a la primera (ciclo cerrado). Con una sola etapa no hay nada que repetir.
+// (Las pistas antiguas guardaban t.vueltas = [modo de cada vuelta]; se convierten al editar.)
+// t.escalas: { "compás:acorde": idEscala } elegidas a mano; si no hay, se usa la sugerida.
+const etapasOf = t => (Array.isArray(t.etapas) && t.etapas.length) ? t.etapas
+  : (Array.isArray(t.vueltas) && t.vueltas.length) ? t.vueltas.map(m => ({ vueltas: 1, modo: m }))
+  : [{ vueltas: 1, modo: 'tonalidad' }];
+const bucleEf = t => etapasOf(t).length > 1;       // con una sola etapa no hay ciclo: sigue así toda la canción
+function ensureEtapas(t) {
+  if (!Array.isArray(t.etapas) || !t.etapas.length) { t.etapas = JSON.parse(JSON.stringify(etapasOf(t))); delete t.vueltas; delete t.bucle; }
+  return t.etapas;
+}
+const modoTxt = m => m === 'acordes' ? 'por acorde' : 'tonalidad';
+// Ejercicio y compases por posición de una etapa: { empieza, termina, bars }.
+// empieza: '1' | '3' | '5' | '135'; termina: '' | '1' | '3' | '5' | '135' (ver DEG_SETS).
+// Las etapas antiguas guardaban un "paso" (1-4): se traduce aquí (el 4 era el 3 cambiando cada 4 compases).
+// Si la etapa no define nada, valen los de antes de las etapas (aj.step por defecto 1, aj.bars por defecto 16).
+const ejOf = e => {
+  let b = e.bars || aj.bars, emp = e.empieza, ter = e.termina || '';
+  if (!emp) {
+    let p = e.paso || aj.step || 1;
+    if (p === 4) { p = 3; b = 4; }
+    ({ empieza: emp, termina: ter } = PASO_A_EJ[p] || PASO_A_EJ[1]);
+  }
+  return { empieza: emp, termina: ter, bars: b };
+};
+const bppOf = e => ejOf(e).bars;
+const DEG_TXT = { '1': 'la fundamental', '3': 'la 3.ª', '5': 'la 5.ª', '135': '1, 3 o 5' };
+const DEG_SHORT = { '1': 'fund.', '3': '3.ª', '5': '5.ª', '135': '1-3-5' };
+const ejTxt = ej => `empieza en ${DEG_TXT[ej.empieza]}` + (ej.termina ? ` y acaba en ${DEG_TXT[ej.termina]}` : '');
+const ejShort = ej => `emp. ${DEG_SHORT[ej.empieza]}` + (ej.termina ? ` · fin ${DEG_SHORT[ej.termina]}` : '');
+function etapasResumen(t) {
+  const et = etapasOf(t), loop = bucleEf(t);
+  return et.map(e => (loop ? e.vueltas + (e.vueltas === 1 ? ' vuelta' : ' vueltas') + ' ' : '') +
+    `${modoTxt(e.modo)}, ${ejTxt(ejOf(e))}, posición cada ${bppOf(e)} compases`).join(' → ') + (loop ? ' ↻' : '');
+}
+function escalaFor(t, barIdx, ci, chord) {
+  const id = t.escalas && t.escalas[barIdx + ':' + ci];
+  return id && compatibleScales(chord).includes(id) ? id : suggestedScale(chord, t.key, t.scale);
+}
+const rootNameOf = c => (aj.nombres === 'solfeo' ? SOLFEO_OF[c.letter] : c.letter) + c.acc;
+const usaAcordes = t => etapasOf(t).some(e => e.modo === 'acordes');
+let selBar = null;                                   // compás seleccionado para elegir sus escalas
+let etapasAbierto = false;                           // editor de etapas desplegado
+
+function renderEtapas() {
+  const t = curTrack(), el = $('vueltasBar');
+  if (!t) { el.innerHTML = ''; return; }
+  const et = etapasOf(t), loop = bucleEf(t), n = et.length;
+  let h = '<div class="etp-chips"><span class="vl">Etapas:</span>' + et.map((e, i) => {
+    return `<span class="vch" data-i="${i}" title="Etapa ${i + 1}: ${loop ? e.vueltas + ' vuelta(s), ' : ''}${modoTxt(e.modo)}, ${ejTxt(ejOf(e))}, la posición cambia cada ${bppOf(e)} compases">` +
+      `<b>${i + 1}</b> ${loop ? e.vueltas + '×' : ''} ${modoTxt(e.modo)} <small>${ejShort(ejOf(e))} · c/${bppOf(e)}</small></span>`;
+  }).join('') + (loop ? '<b class="hasta" title="Al acabar la última etapa se vuelve a la primera">↻ vuelve a la 1</b>' : '') +
+    `<button type="button" data-a="edit">${etapasAbierto ? 'Cerrar plan' : '✎ Plan de etapas'}</button></div>`;
+  if (etapasAbierto) {
+    const degOpts = sel => ['1', '3', '5', '135'].map(k => `<option value="${k}"${sel === k ? ' selected' : ''}>${DEG_TXT[k]}</option>`).join('');
+    const finOpts = sel => `<option value="">sin nota final fija</option>` + degOpts(sel);
+    h += '<div class="etp-ed">' + et.map((e, i) => {
+      const ej = ejOf(e);
+      return `<div class="etr" data-i="${i}"><b>${i + 1}</b> ` +
+        (loop ? `<input type="number" min="1" max="99" data-f="vueltas" value="${e.vueltas}"> vueltas` : '<span class="mut">toda la canción</span>') +
+        ` <select data-f="modo" title="Escala que se dibuja en esta etapa"><option value="tonalidad"${e.modo === 'tonalidad' ? ' selected' : ''}>tonalidad</option>` +
+        `<option value="acordes"${e.modo === 'acordes' ? ' selected' : ''}>por acorde</option></select>` +
+        ` · posición cada <input type="number" min="1" max="64" data-f="bars" value="${ej.bars}" title="Compases por posición"> comp.` +
+        (n > 1 ? '<button type="button" data-a="del" title="Quitar esta etapa">✕</button>' : '') + '</div>' +
+        `<div class="etr etr2" data-i="${i}">Cada compás: empieza en <select data-f="empieza" title="Nota del acorde en la que hay que empezar">${degOpts(ej.empieza)}</select>` +
+        ` · termina en <select data-f="termina" title="Nota del acorde en la que hay que acabar (se ilumina en el último tiempo)">${finOpts(ej.termina)}</select></div>`;
+    }).join('') + '<div class="etr"><button type="button" data-a="add">+ etapa</button>' +
+      (n > 1 ? '<span class="mut">Al terminar la última etapa se vuelve a la 1.</span>' : '') + '</div></div>';
+  }
+  el.innerHTML = h;
+}
+function renderEscPanel() {
+  const t = curTrack(), el = $('escPanel');
+  const prog = t && progOf(t);
+  if (!t || !prog.bars.length) { el.innerHTML = ''; return; }
+  if (selBar == null || !prog.bars[selBar]) {
+    el.innerHTML = usaAcordes(t)
+      ? '<div class="hint">Elige la escala de cada acorde en su desplegable (la primera es la sugerida).</div>'
+      : '<div class="hint">Pon una etapa «por acorde» en el plan de etapas para elegir la escala de cada acorde.</div>';
+  } else {
+    el.innerHTML = `<div class="escp"><b>Compás ${selBar + 1}</b>` + prog.bars[selBar].map((c, ci) => {
+      const cur = escalaFor(t, selBar, ci, c), sug = suggestedScale(c, t.key, t.scale);
+      return `<label>${esc(chordDisplay(c, aj.nombres))} <select data-ci="${ci}">` +
+        compatibleScales(c).map(id => `<option value="${id}"${id === cur ? ' selected' : ''}>${rootNameOf(c)} ${SCALES[id].nombre}${id === sug ? ' (sugerida)' : ''}</option>`).join('') +
+        '</select></label>';
+    }).join('') + '<button type="button" data-a="close">Cerrar</button></div>';
+  }
+  $('chartRows').querySelectorAll('.cbar[data-b]').forEach(c => c.classList.toggle('sel', +c.dataset.b === selBar));
+}
+// Control del mástil del acorde: "cambia con la posición" o "fijo" (con una posición elegida para cada acorde).
+function renderAcordeCtl() {
+  const t = curTrack(), el = $('acordeCtl');
+  if (!t) { el.innerHTML = ''; return; }
+  let h = `<label class="acctl modo" title="Dónde se dibuja el acorde: en la misma zona que la escala que practicas, o fijo en una zona propia (como lo toca la guitarra rítmica del backing track)">Dónde se dibuja el acorde ` +
+    `<select id="selAcMod"><option value="sigue"${t.acordeFijo ? '' : ' selected'}>cambia con la posición</option>` +
+    `<option value="fijo"${t.acordeFijo ? ' selected' : ''}>fijo</option></select></label>`;
+  if (t.acordeFijo) {
+    const seen = new Set();
+    progOf(t).bars.flat().forEach(c => {
+      const k = chordKey(c); if (seen.has(k)) return; seen.add(k);
+      const cur = (t.posAcorde && t.posAcorde[k]) || chordPositions(c)[0].id;
+      h += `<label class="acctl"><span class="nm">${esc(chordDisplay({ ...c, bass: null }, aj.nombres))}</span> <select data-k="${k}" title="Posición fija de este acorde">` +
+        chordPositions(c).map(p => `<option value="${p.id}"${p.id === cur ? ' selected' : ''}>pos. ${p.id} (trastes ${p.lo}-${p.hi})</option>`).join('') + '</select></label>';
+    });
+  }
+  el.innerHTML = h;
+}
+$('acordeCtl').onchange = e => {
+  const s = e.target.closest('select'), t = curTrack(); if (!s || !t) return;
+  if (s.id === 'selAcMod') t.acordeFijo = s.value === 'fijo';
+  else { t.posAcorde = t.posAcorde || {}; t.posAcorde[s.dataset.k] = +s.value; }
+  changedPlan();
+};
+function changedPlan() { savePistas(); chartKey = ''; lastKey = ''; renderEtapas(); renderEscPanel(); renderResumen(); }
+$('vueltasBar').onchange = e => {
+  const t = curTrack(); if (!t) return;
+  const f = e.target.dataset.f, row = e.target.closest('.etr'); if (!f || !row) return;
+  const st = ensureEtapas(t)[+row.dataset.i], v = parseInt(e.target.value, 10);
+  { const ej = ejOf(st); st.empieza = ej.empieza; st.termina = ej.termina; st.bars = ej.bars; delete st.paso; }   // deja la etapa explícita
+  if (f === 'vueltas') st.vueltas = Math.max(1, Math.min(99, v || 1));
+  else if (f === 'modo') st.modo = e.target.value;
+  else if (f === 'bars') st.bars = Math.max(1, Math.min(64, v || 16));
+  else if (f === 'empieza' && DEG_SETS[e.target.value]) st.empieza = e.target.value;
+  else if (f === 'termina') st.termina = DEG_SETS[e.target.value] ? e.target.value : '';
+  etapaCur = -1; changedPlan();
+};
+$('vueltasBar').onclick = e => {
+  const b = e.target.closest('button'), t = curTrack(); if (!b || !t) return;
+  const a = b.dataset.a;
+  if (a === 'edit') { etapasAbierto = !etapasAbierto; renderEtapas(); return; }
+  const et = ensureEtapas(t);
+  if (a === 'add') { const u = et[et.length - 1], ej = ejOf(u); et.push({ vueltas: 1, modo: u.modo === 'tonalidad' ? 'acordes' : 'tonalidad', empieza: ej.empieza, termina: ej.termina, bars: ej.bars }); }
+  if (a === 'del' && et.length > 1) et.splice(+b.closest('.etr').dataset.i, 1);
+  etapaCur = -1; changedPlan();
+};
+// Desplegable de escala bajo cada acorde del gráfico
+$('chartRows').onchange = e => {
+  const s = e.target.closest('select.esc'), t = curTrack(); if (!s || !t) return;
+  const bi = +s.dataset.b, ci = +s.dataset.c, chord = progOf(t).bars[bi][ci];
+  t.escalas = t.escalas || {};
+  if (s.value === suggestedScale(chord, t.key, t.scale)) delete t.escalas[bi + ':' + ci]; else t.escalas[bi + ':' + ci] = s.value;
+  changedPlan();
+};
+$('escPanel').onchange = e => {
+  const s = e.target.closest('select'), t = curTrack(); if (!s || !t || selBar == null) return;
+  const ci = +s.dataset.ci, chord = progOf(t).bars[selBar][ci];
+  t.escalas = t.escalas || {};
+  if (s.value === suggestedScale(chord, t.key, t.scale)) delete t.escalas[selBar + ':' + ci]; else t.escalas[selBar + ':' + ci] = s.value;
+  changedPlan();
+};
+$('escPanel').onclick = e => { if (e.target.closest('[data-a="close"]')) { selBar = null; renderEscPanel(); } };
+
+let chartKey = '', chartAct = -1, etapaCur = -1;
+function updatePracticeChart(t, prog, activeBar, etapaIdx) {
+  const card = $('chart');
+  if (!t || !prog.bars.length) { card.style.display = 'none'; chartKey = ''; return; }
+  card.style.display = '';
+  const k = [t.id, t.prog, t.beats, aj.nombres, aj.bars, aj.step, t.key, t.scale, JSON.stringify(t.etapas || t.vueltas || null), JSON.stringify(t.escalas || null), !!t.acordeFijo, JSON.stringify(t.posAcorde || null)].join('|');
+  if (k !== chartKey) {
+    chartKey = k; chartAct = -1; etapaCur = -1;
+    const selEscala = usaAcordes(t) ? (bi, ci) => {
+      const c = prog.bars[bi][ci], cur = escalaFor(t, bi, ci, c);
+      return `<select class="esc" data-b="${bi}" data-c="${ci}" title="Escala para este acorde">` +
+        compatibleScales(c).map(id => `<option value="${id}"${id === cur ? ' selected' : ''}>${SCALES[id].corto}</option>`).join('') + '</select>';
+    } : null;
+    $('chartRows').innerHTML = chartHtml(prog.bars.map(b => b.map(chordText)), selEscala);
+    renderEtapas(); renderEscPanel(); renderAcordeCtl();
+  }
+  if (activeBar !== chartAct) {
+    chartAct = activeBar;
+    $('chartRows').querySelectorAll('.cbar[data-b]').forEach(el => el.classList.toggle('act', +el.dataset.b === activeBar));
+  }
+  if (etapaIdx !== etapaCur) {
+    etapaCur = etapaIdx;
+    $('vueltasBar').querySelectorAll('.vch').forEach(el => el.classList.toggle('cur', +el.dataset.i === etapaIdx));
+  }
+}
+
+// ---------- resumen ----------
+function rangeText(ids) {
+  ids = ids.slice().sort((a, b) => a - b);
+  if (ids.length > 1 && ids[ids.length - 1] - ids[0] === ids.length - 1) return `${ids[0]} a ${ids[ids.length - 1]}`;
+  return ids.length > 1 ? ids.slice(0, -1).join(', ') + ' y ' + ids[ids.length - 1] : String(ids[0]);
+}
+function renderResumen() {
+  const t = curTrack();
+  if (!t) { $('resumen').textContent = 'Elige o crea una pista para empezar.'; return; }
+  const penta = esCajas(t.scale);
+  const ids = aj.sel.filter(i => i >= 1 && i <= 5);
+  const palabra = ids.length > 1 ? 'posiciones' : 'posición';
+  const et = etapasOf(t);
+  const base = `Hoy: ${keyName(t.key, t.scale)} ${SCALES[t.scale].nombre} con ${t.title}, ${palabra} ${ids.length ? rangeText(ids) : '—'}`;
+  $('resumen').textContent = et.length === 1
+    ? `${base}: ${ejTxt(ejOf(et[0])).replace('empieza', 'empieza cada compás')} del acorde${et[0].modo === 'acordes' ? ', con la escala de cada acorde' : ''}`
+    : `${base}. Etapas: ${etapasResumen(t)}`;
+}
+
+// ---------- panel de configuración de práctica ----------
+function renderSelPista() {
+  const s = $('selPista');
+  s.innerHTML = pistas.length ? pistas.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('') : '<option value="">(sin pistas)</option>';
+  if (aj.trackId && pistas.some(p => p.id === aj.trackId)) s.value = aj.trackId;
+  else { aj.trackId = pistas[0] ? pistas[0].id : null; s.value = aj.trackId || ''; }
+}
+function renderChecks() {
+  const t = curTrack(), box = $('checksPos');
+  box.innerHTML = '';
+  if (!t) return;
+  positionsOf(t).forEach(p => {
+    const l = document.createElement('label');
+    const c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = aj.sel.includes(p.id);
+    c.onchange = () => {
+      aj.sel = c.checked ? [...new Set([...aj.sel, p.id])] : aj.sel.filter(i => i !== p.id);
+      saveAj(); renderResumen(); lastKey = '';
+    };
+    l.appendChild(c);
+    l.appendChild(document.createTextNode(p.shape ? ` ${p.id} (forma ${p.shape})` : ` ${p.id}`));
+    box.appendChild(l);
+  });
+}
+function selectTrack(id) {
+  aj.trackId = id; saveAj();
+  const t = curTrack();
+  if (t) { loadVideo(t.videoId); buildBeatDots(t.beats); }
+  renderChecks(); renderResumen(); renderInicio(); lastKey = '';
+}
+$('selPista').onchange = e => selectTrack(e.target.value);
+$('inpBars').onchange = e => { aj.bars = Math.max(1, Math.min(64, +e.target.value || 16)); e.target.value = aj.bars; saveAj(); lastKey = ''; };
+$('selNombres').onchange = e => { aj.nombres = e.target.value; saveAj(); fillKeySelect(); renderBoxes(); syncProg(); renderResumen(); renderLista(); lastKey = ''; };
+$('selEtiqueta').onchange = e => { aj.etiqueta = e.target.value; saveAj(); lastKey = ''; };
+$('btnTodas').onclick = () => { aj.sel = [1, 2, 3, 4, 5]; saveAj(); renderChecks(); renderResumen(); lastKey = ''; };
+
+// ---------- ajuste del segundo de inicio (en práctica) ----------
+function renderInicio() { const t = curTrack(); $('inicioTxt').textContent = t ? t.startSec.toFixed(3) + ' s' : ''; }
+function nudgePractice(d) {
+  const t = curTrack(); if (!t) return;
+  t.startSec = Math.max(0, Math.round((t.startSec + d) * 1000) / 1000);
+  savePistas(); renderInicio(); lastKey = ''; lastBeatKey = '';
+}
+// Si el compás va "por delante" de la música hay que retrasar el inicio (+); si va por detrás, adelantarlo (−).
+document.querySelectorAll('#ajusteInicio button[data-n]').forEach(b => b.onclick = () => nudgePractice(parseFloat(b.dataset.n)));
+$('nAqui').onclick = () => {
+  const t = curTrack(); if (!t) return;
+  t.startSec = Math.max(0, Math.round(curTime() * 1000) / 1000);
+  savePistas(); renderInicio(); lastKey = ''; lastBeatKey = '';
+};
+
+// ---------- contador y mástil ----------
+function buildBeatDots(n) {
+  $('tiempos').innerHTML = Array.from({ length: n }, (_, i) => `<span>${i + 1}</span>`).join('');
+}
+function flash(cls) {
+  const f = $('flash'); f.classList.remove('f1', 'f2', 'f3'); void f.offsetWidth; f.classList.add(cls);
+}
+let lastKey = '', lastBeatKey = '';
+
+// ---------- simulación sonora (opcional) ----------
+// Toca con un sonido de guitarra pulsada una frase de 3 notas por compás: empieza y termina donde pide el ejercicio de la etapa.
+let audioCtx = null, simOn = false, simNote = null, simState = null;
+const pluckCache = new Map();
+function ensureAudio() {
+  if (!audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; audioCtx = new AC(); }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+// Cuerda pulsada (Karplus-Strong): ruido que se va apagando en una línea de retardo de la longitud de la nota.
+function pluckBuffer(ctx, midi) {
+  const f = 440 * Math.pow(2, (midi - 69) / 12), sr = ctx.sampleRate, len = Math.floor(sr * 1.8);
+  const N = Math.max(2, Math.round(sr / f - 0.5)), line = new Float32Array(N), buf = ctx.createBuffer(1, len, sr), out = buf.getChannelData(0);
+  let prev = 0;
+  for (let i = 0; i < N; i++) { const x = Math.random() * 2 - 1; prev = 0.6 * x + 0.4 * prev; line[i] = prev; }   // ruido suavizado = ataque menos áspero
+  let p = 0;
+  for (let i = 0; i < len; i++) {
+    const cur = line[p];
+    line[p] = 0.9965 * 0.5 * (cur + line[(p + 1) % N]);
+    out[i] = Math.tanh(cur * 2.2) * 0.55;                                   // un poco de saturación: sonido de guitarra eléctrica
+    p = (p + 1) % N;
+  }
+  for (let i = 0; i < 400; i++) out[len - 1 - i] *= i / 400;                // final sin chasquido
+  return buf;
+}
+function playMidi(midi) {
+  const ctx = ensureAudio(); if (!ctx) return;
+  let b = pluckCache.get(midi);
+  if (!b) { b = pluckBuffer(ctx, midi); pluckCache.set(midi, b); }
+  const src = ctx.createBufferSource(), g = ctx.createGain();
+  src.buffer = b; g.gain.value = (aj.simVol === undefined ? 60 : aj.simVol) / 100;
+  src.connect(g); g.connect(ctx.destination); src.start();
+}
+// Una nota por tiempo clave del compás: la 1.ª en el primer tiempo (donde empieza), la última en el último (donde termina)
+// y la del medio entre ambos. La frase se calcula al empezar el compás con los acordes de ese compás.
+function simBeat(t, pos, escId, ej, bar, beat, barChords) {
+  if (!simState || simState.bar !== bar) {
+    const first = barChords[0], last = barChords[barChords.length - 1];
+    const scaleNotes = escId ? notesInWindow(scalePcs(first.rootPc, escId), pos.lo, pos.hi) : pos.notes;
+    simState = { bar, ph: simNotes(scaleNotes, targetSets(pos, first, ej).start, targetSets(pos, last, ej).end, bar) };
+  }
+  const ph = simState.ph; if (!ph) return;
+  const mid = Math.ceil((1 + t.beats) / 2);
+  const n = beat === 1 ? ph.start : beat === t.beats ? ph.end : (beat === mid ? ph.mid : null);
+  if (n) { playMidi(midiOf(n)); simNote = { s: n.s, f: n.f }; }
+}
+function setSim(on) {
+  simOn = on; simState = null; simNote = null; lastKey = '';
+  $('btnSim').classList.toggle('on', on);
+  $('btnSim').textContent = '🎸 Simulación: ' + (on ? 'sí' : 'no');
+  if (on) playMidi(57);                                                      // nota de prueba (La), para comprobar que se oye
+}
+$('btnSim').onclick = () => setSim(!simOn);
+$('volSim').value = aj.simVol === undefined ? 60 : aj.simVol;
+$('volSim').oninput = e => { aj.simVol = +e.target.value; saveAj(); };
+
+// Notas del acorde y zona donde se dibuja: la posición actual o, en modo «fijo», la elegida para ese acorde.
+function chordShape(t, chord, pos) {
+  if (t.acordeFijo) {
+    const cps = chordPositions(chord);
+    const cp = cps.find(p => p.id === (t.posAcorde && t.posAcorde[chordKey(chord)])) || cps[0];
+    return { cn: chordInPosition(cp, chord), lo: cp.lo, hi: cp.hi };
+  }
+  return { cn: chordInPosition(pos, chord), lo: pos.lo, hi: pos.hi };
+}
+// Tarjetas de la línea de compases actual (hasta 4 compases): la del compás que suena se ilumina y, si el compás
+// tiene dos acordes, también el que toca. Cada una lleva su diagrama pequeño (se oculta en el móvil por falta de sitio).
+let tiraKey = '', tiraAct = '';
+function renderTira(t, prog, pos, barIdx, ci, pre) {
+  const row = Math.floor(barIdx / 4) * 4, bars = prog.bars.slice(row, row + 4);
+  const k = [t.id, t.prog, row, pos && pos.id, aj.nombres, !!t.acordeFijo, JSON.stringify(t.posAcorde || null)].join('|');
+  if (k !== tiraKey) {
+    tiraKey = k; tiraAct = '';
+    $('tira').innerHTML = bars.map((b, i) => `<div class="tc" data-b="${row + i}"><small>${row + i + 1}</small><div class="tcs">` +
+      b.map((c, j) => {
+        let mini = '';
+        if (pos) {
+          const sh = chordShape(t, c, pos);
+          mini = `<div class="mini">${fretSvg({ from: Math.max(0, sh.lo - 1), to: sh.hi + 1, fw: 22, sg: 14, lo: sh.lo, hi: sh.hi, mini: true, chord: sh.cn, tonicPc: c.rootPc, labelFn: () => '' })}</div>`;
+        }
+        return `<div class="tcc" data-c="${j}"><div class="nm">${esc(chordDisplay(c, aj.nombres))}</div>${mini}</div>`;
+      }).join('') + '</div></div>').join('');
+  }
+  const act = pre ? '' : barIdx + ':' + ci;
+  if (act !== tiraAct) {
+    tiraAct = act;
+    $('tira').querySelectorAll('.tc').forEach(el => {
+      const on = !pre && +el.dataset.b === barIdx;
+      el.classList.toggle('act', on);
+      el.querySelectorAll('.tcc').forEach(c => c.classList.toggle('ca', on && +c.dataset.c === ci));
+    });
+  }
+}
+
+function tick() {
+  requestAnimationFrame(tick);
+  if (playerReady) { const pl = isPlaying(); if (pl !== lastPlaying) { lastPlaying = pl; setWake(pl); } }
+  const t = curTrack();
+  if (!t) {
+    updatePracticeChart(null, null, -1, -1);
+    if (lastKey !== 'sin-pista') {                          // sin pistas: decir qué hacer en vez de dejar la pantalla vacía
+      lastKey = 'sin-pista';
+      $('acordeActual').textContent = '—'; $('acordeSig').textContent = '';
+      $('posBadge').textContent = 'No hay ninguna pista';
+      $('compas').textContent = 'Pulsa ⚙ → Pistas: crea una o usa «Importar JSON».';
+      ['fret', 'fretChord', 'mini', 'escalaTit', 'acordeTit', 'faseTxt', 'tira'].forEach(i => { $(i).innerHTML = ''; });
+      tiraKey = '';
+    }
+    return;
+  }
+  const prog = progOf(t);
+  if (!prog.bars.length) return;
+  // Si el reproductor de YouTube aún no ha cargado (o tarda en el móvil) se dibuja igualmente el estado inicial.
+  const loc = locate(playerReady ? curTime() : 0, t);
+  const positions = positionsOf(t);
+  const order = orderForPractice(positions, aj.sel);
+  const bar = loc.pre ? 0 : loc.bar, beat = loc.pre ? 1 : loc.beat;
+  // Plan de etapas: de la etapa salen el modo (tonalidad/acordes), los compases por posición y el paso.
+  // La posición vuelve a la primera (la más grave) al empezar cada etapa y cambia cada "bpp" compases dentro de ella.
+  const progLen = prog.bars.length, et = etapasOf(t), bl = bucleEf(t);
+  const st = stageAt(et, bl, progLen, bar), stage = et[st.idx];
+  const stNext = stageAt(et, bl, progLen, bar + 1);
+  const stageStartNext = stNext.barsInto === 0;                // el compás siguiente empieza una etapa nueva
+  const modo = stage.modo, ej = ejOf(stage);                   // modo: 'tonalidad' | 'acordes'; ej: dónde empieza y termina cada compás
+  updatePracticeChart(t, prog, loc.pre ? -1 : bar % progLen, loc.pre ? -1 : st.idx);
+  const bpp = bppOf(stage);
+  const n = order.length;
+  const posIdx = n ? Math.floor(st.barsInto / bpp) % n : -1;
+  const barInBlk = st.barsInto % bpp;
+  const barChords = prog.bars[bar % prog.bars.length];
+  const ci = chordIndexAtBeat(barChords.length, beat, t.beats);
+  const chord = barChords[ci];
+  const nextChord = ci + 1 < barChords.length ? barChords[ci + 1] : prog.bars[(bar + 1) % prog.bars.length][0];
+  const changeNext = n > 1 && (barInBlk === bpp - 1 || stageStartNext);
+  const pos = posIdx >= 0 ? order[posIdx] : null;
+  const nextPos = n > 1 ? order[stageStartNext ? 0 : (posIdx + 1) % n] : null;
+  const escId = modo === 'acordes' ? escalaFor(t, bar % prog.bars.length, ci, chord) : null;
+  renderTira(t, prog, pos, bar % progLen, ci, loc.pre);
+  // En el último tiempo se anuncia dónde empieza el compás siguiente (con su acorde, su posición y su etapa, que pueden cambiar).
+  let prev = null;
+  if (!loc.pre && beat === t.beats && t.beats > 1 && n) {
+    const eN = et[stNext.idx], ejN = ejOf(eN), posN = order[Math.floor(stNext.barsInto / bppOf(eN)) % n];
+    const chN = prog.bars[(bar + 1) % progLen][0];
+    prev = { ej: ejN, chord: chN, pos: posN, start: targetSets(posN, chN, ejN).start };
+  }
+
+  // destellos y puntos de tiempo (cada cambio de tiempo)
+  const beatKey = loc.pre ? 'pre' : bar + ':' + beat;
+  if (beatKey !== lastBeatKey) {
+    lastBeatKey = beatKey;
+    const dots = $('tiempos').children;
+    for (let i = 0; i < dots.length; i++) {
+      const on = !loc.pre && i + 1 === beat;
+      dots[i].className = on ? 'on' + (beat === 1 ? ' uno' : (beat === t.beats && ej.termina ? ' ult' : '')) : '';
+    }
+    if (simOn && pos && !loc.pre && isPlaying()) simBeat(t, pos, escId, ej, bar, beat, barChords);
+    // Ilumina, solo en el mástil de la escala, las notas donde hay que empezar (verde, primer tiempo)
+    // y donde hay que terminar (amarillo, último tiempo, si la etapa tiene nota final).
+    const fase = loc.pre ? '' : beat === 1 ? 'inicio' : (ej.termina && beat === t.beats ? 'fin' : '');
+    $('fret').dataset.fase = fase;
+    $('fret').dataset.prev = prev ? '1' : '';
+    $('faseTxt').className = fase || (prev ? 'prox' : '');
+    $('faseTxt').textContent = fase === 'inicio' ? `▶ EMPIEZA en ${DEG_TXT[ej.empieza]}`
+      : prev ? (fase === 'fin' ? `■ ACABA en ${DEG_TXT[ej.termina]} · ` : '') + `→ luego empieza en ${DEG_TXT[prev.ej.empieza]}`
+      : '';
+    const isNewStage = !loc.pre && st.barsInto === 0 && bar > 0;       // primer compás de una etapa nueva
+    const isNew = isNewStage || (n > 1 && barInBlk === 0 && bar > 0 && !loc.pre);   // ...o de una posición nueva
+    const nextSt = et[stNext.idx];
+    const stTxt = e => `${modoTxt(e.modo)}, ${ejTxt(ejOf(e))}, posición cada ${bppOf(e)} compases`;
+    // Orden de recorrido (de la más grave a la más aguda del mástil), con la actual en negrita, y cuándo toca cambiar.
+    const ordenTxt = order.map((p, i) => i === posIdx ? `<b>${p.id}</b>` : p.id).join(' → ');
+    const quedan = bpp - barInBlk;
+    $('posBadge').title = 'Se recorren las posiciones marcadas de la más grave a la más aguda del mástil. Se pasa a la siguiente cada N compases (campo «Compases»), contando desde el compás 1 de la pista; después de la última se vuelve a la primera.';
+    $('posBadge').innerHTML = pos ? `${esc(pos.label)}${pos.shape ? ' · forma ' + pos.shape : ''} · trastes ${pos.lo}-${pos.hi}` +
+      `<small>${n > 1 ? `Orden: ${ordenTxt} · cambia cada ${bpp} compases<br>Compás ${barInBlk + 1} de ${bpp} · cambia en ${quedan} ${quedan === 1 ? 'compás' : 'compases'}`
+        : `Solo hay una posición marcada: no cambia`}</small>` : '';
+    if (!loc.pre && isPlaying()) {
+      if (beat === 1 && isNew) flash('f3');
+      else if (beat === 1) flash('f1');
+      else if (beat === t.beats && ej.termina) flash('f2');
+    }
+    const lapTxt = et.length > 1
+      ? `Etapa ${st.idx + 1}/${et.length} · vuelta ${st.lapInStage + 1} de ${stage.vueltas}`
+      : `Vuelta ${st.lapNo + 1}`;
+    $('compas').textContent = loc.pre ? 'Antes del compás 1…' :
+      (n ? `${lapTxt} (${modoTxt(modo)}) · Compás ${barInBlk + 1} de ${bpp} · ${pos.label}${pos.shape ? ' (forma ' + pos.shape + ')' : ''}` : 'Elige alguna posición');
+    $('aviso').className = isNew ? 'nuevo' : '';
+    $('aviso').textContent = isNewStage && et.length > 1
+      ? `★ ETAPA ${st.idx + 1} de ${et.length}: ${stTxt(stage)}`
+      : isNew
+        ? `★ CAMBIO: ahora la ${pos.label.toLowerCase()} (trastes ${pos.lo}-${pos.hi})`
+        : stageStartNext && et.length > 1 && !loc.pre
+          ? `⚠ Próximo compás empieza la etapa ${stNext.idx + 1}: ${stTxt(nextSt)}`
+          : changeNext && !loc.pre
+            ? `⚠ Próximo compás: cambias a la ${nextPos.label.toLowerCase()} (trastes ${nextPos.lo}-${nextPos.hi})`
+            : (!loc.pre && ej.termina && beat === t.beats ? `Último tiempo: acaba en ${DEG_TXT[ej.termina]}` : '');
+  }
+
+  // redibujar el mástil solo si cambia algo relevante
+  const key = [t.id, t.key, t.scale, posIdx, pos && pos.id, chordDisplay(chord, 'letras'), ej.empieza, ej.termina, aj.sel.join(), aj.nombres, aj.etiqueta, nextPos && nextPos.id, bpp, escId,
+    prev ? chordText(prev.chord) + ':' + prev.pos.id + ':' + prev.ej.empieza : '', simOn && simNote ? simNote.s + ':' + simNote.f : ''].join('|');
+  if (key === lastKey) return;
+  lastKey = key;
+  $('acordeActual').textContent = chordDisplay(chord, aj.nombres);
+  $('acordeSig').textContent = 'Siguiente: ' + chordDisplay(nextChord, aj.nombres);
+  renderFret(t, pos, nextPos, chord, escId, ej, prev);
+}
+
+// escId: escala del acorde (vuelta "por acorde"); null = escala de la tonalidad.
+// La zona del mástil es siempre la de la posición de la tonalidad: solo cambian las notas dibujadas dentro de ella.
+function renderFret(t, pos, nextPos, chord, escId, ej, prev) {
+  if (!pos) {
+    ['fret', 'fretChord', 'mini', 'escalaTit', 'acordeTit'].forEach(i => $(i).innerHTML = '');
+    $('posInfo').textContent = 'Elige al menos una posición.'; return;
+  }
+  const porAcorde = !!escId;
+  const tonic = porAcorde ? chord.rootPc : t.key;
+  const flats = porAcorde ? (chord.acc === 'b' || usaBemoles(chord.rootPc, escId)) : usaBemoles(t.key, t.scale);
+  const nom = pc => noteName(pc, flats, aj.nombres);
+  const scaleNotes = porAcorde ? notesInWindow(scalePcs(chord.rootPc, escId), pos.lo, pos.hi) : pos.notes;
+  // Notas donde hay que empezar y donde hay que terminar; "targets" = unión, para marcarlas en grande.
+  const { start, end } = targetSets(pos, chord, ej);
+  const targets = [...start, ...end.filter(n => !start.some(m => m.s === n.s && m.f === n.f))];
+  // Acorde "fijo": se dibuja en su propia zona (la que se eligió para ese acorde) y, aparte, las notas
+  // objetivo dentro de la zona de práctica. Si no, el acorde sigue a la posición de la escala.
+  let cn, zone2 = null, acZona = '';
+  if (t.acordeFijo) {
+    const cps = chordPositions(chord);
+    const cp = cps.find(p => p.id === (t.posAcorde && t.posAcorde[chordKey(chord)])) || cps[0];
+    zone2 = { lo: cp.lo, hi: cp.hi };
+    cn = chordInPosition(cp, chord);
+    targets.forEach(n => { if (!cn.some(m => m.s === n.s && m.f === n.f)) cn.push(n); });
+    acZona = ` · <b>fijo</b> en la posición ${cp.id} (trastes ${cp.lo}-${cp.hi})`;
+  } else cn = chordInPosition(pos, chord);
+  $('posInfo').textContent = `${pos.label}${pos.shape ? ' · forma ' + pos.shape : ''} · trastes ${pos.lo}-${pos.hi}`;
+  // En el móvil (modo horizontal) los mástiles se amplían a la zona de la posición actual (y a la zona fija del acorde, si cabe).
+  const zoom = document.body.classList.contains('movil') && !document.body.classList.contains('ajustes');
+  let from = 0, to = MAX_FRET, fw = 52, sg = 22;
+  if (zoom) {
+    let lo = pos.lo, hi = pos.hi;
+    if (zone2) { lo = Math.min(lo, zone2.lo); hi = Math.max(hi, zone2.hi); }
+    if (hi - lo > 9) { lo = pos.lo; hi = pos.hi; }              // zona fija demasiado lejos: se prioriza la de práctica
+    from = Math.max(0, lo - 1); to = Math.min(MAX_FRET, hi + 1); fw = 46; sg = 31;
+  }
+  // Dos mástiles alineados: arriba la escala, debajo el acorde (mismas posición y zona sombreada).
+  const base = { from, to, fw, sg, lo: pos.lo, hi: pos.hi, tonicPc: tonic,
+    labelFn: (kind, n) => aj.etiqueta === 'nota' ? nom(n.pc) : (kind === 'scale' ? degreeName(tonic, n.pc) : n.degree),
+    tip: n => `${nom(n.pc)} · grado ${degreeName(tonic, n.pc)} · traste ${n.f}` };
+  $('escalaTit').innerHTML = porAcorde
+    ? `<b>${zoom ? 'Escala' : 'Escala del acorde'}:</b> ${esc(rootNameOf(chord))} ${SCALES[escId].nombre}`
+    : `<b>${zoom ? 'Escala' : 'Escala de la tonalidad'}:</b> ${esc(keyName(t.key, t.scale))} ${SCALES[t.scale].nombre}`;
+  if (zoom) $('escalaTit').innerHTML += ` · <b>${esc(pos.label)}</b> (trastes ${pos.lo}-${pos.hi})`;   // en el móvil no hay otro sitio donde ver la posición
+  $('fret').innerHTML = fretSvg({ ...base, padT: 28, noNums: true, scale: scaleNotes, targets, targetsStart: start, targetsEnd: end, targetsNext: prev ? prev.start : [], glowTargets: true, sim: simOn ? simNote : null });
+  $('acordeTit').innerHTML = zoom
+    ? `<b>Acorde:</b> ${esc(chordDisplay(chord, aj.nombres))} (${chord.notes.map(n => nom(n.pc)).join(' ')})${zone2 ? ' · fijo' : ''}`
+    : `<b>Acorde:</b> ${esc(chordDisplay(chord, aj.nombres))} (${chord.notes.map(n => nom(n.pc)).join(' ')})${acZona} · ` +
+      `<b>notas objetivo</b> (grandes${zone2 ? ', en la zona naranja' : ''}): ${ejTxt(ej)}`;
+  $('fretChord').innerHTML = fretSvg({ ...base, padT: 28, chord: cn, targets, zone2 });
+  if (nextPos) {
+    $('mini').innerHTML = `Siguiente: <b>${nextPos.label}</b>${nextPos.shape ? ' (forma ' + nextPos.shape + ')' : ''}<br>trastes ${nextPos.lo}-${nextPos.hi}` +
+      fretSvg({ from: Math.max(0, nextPos.lo - 1), to: nextPos.hi + 1, fw: 20, sg: 13, lo: nextPos.lo, hi: nextPos.hi, mini: true, scale: nextPos.notes, tonicPc: t.key });
+  } else $('mini').innerHTML = '';
+}
+
+// ---------- pestañas ----------
+function showTab(p) {
+  $('vistaPractica').style.display = p ? '' : 'none';
+  $('vistaPistas').style.display = p ? 'none' : '';
+  $('tabPractica').classList.toggle('on', p); $('tabPistas').classList.toggle('on', !p);
+  document.body.classList.toggle('enPistas', !p);
+  lastKey = '';
+}
+$('tabPractica').onclick = () => showTab(true);
+$('tabPistas').onclick = () => showTab(false);
+
+// ---------- formulario de pistas ----------
+let editingId = null;
+function fillKeySelect() {
+  const s = $('fKey'), cur = s.value;
+  s.innerHTML = KEY_PCS.map(pc => `<option value="${pc}">${keyOptionLabel(pc)}</option>`).join('');
+  s.value = cur || '0';
+}
+// ---------- editor de la progresión en cajitas (una por compás) ----------
+const ROOTS = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+const QUALS = [['', 'mayor'], ['m', 'menor'], ['7', '7'], ['maj7', 'maj7'], ['m7', 'm7'], ['m7b5', 'm7b5'], ['dim', 'dim']];
+let progBars = [];
+const newChord = () => ({ root: 'C', q: '', bass: '' });
+const cloneJ = o => JSON.parse(JSON.stringify(o));
+const rootLabel = r => aj.nombres === 'solfeo' ? SOLFEO_OF[r[0]] + r.slice(1) : r;
+const specText = c => c.root + c.q + (c.bass ? '/' + c.bass : '');
+function syncProg() {
+  $('fProg').value = progBars.map(b => b.map(specText).join(' ')).join(' | ');
+  $('progChart').innerHTML = chartHtml(progBars.map(b => b.map(specText)));
+}
+function renderBoxes() {
+  const opts = (list, cur) => list.map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${l}</option>`).join('');
+  const rootOpts = ROOTS.map(r => [r, rootLabel(r)]);
+  $('progBoxes').innerHTML = progBars.map((bar, i) => `<div class="bx" data-i="${i}">
+    <div class="bxh"><b>Compás ${i + 1}</b><button type="button" data-a="dup" title="Duplicar este compás">⧉</button><button type="button" data-a="del" title="Borrar este compás">✕</button></div>` +
+    bar.map((c, j) => `<div class="cc" data-j="${j}">
+      <select class="r" title="Fundamental">${opts(rootOpts, c.root)}</select>
+      <select class="q" title="Tipo de acorde">${opts(QUALS, c.q)}</select>
+      <select class="b" title="Bajo (opcional)">${opts([['', 'sin bajo'], ...rootOpts.map(([v, l]) => [v, '/ ' + l])], c.bass)}</select></div>`).join('') +
+    (bar.length === 1 ? '<button type="button" data-a="two">+ 2.º acorde</button>' : bar.length === 2 ? '<button type="button" data-a="one">− quitar 2.º</button>' : '') +
+    '</div>').join('');
+}
+function setProgBars(bars) { progBars = bars; renderBoxes(); syncProg(); }
+// Texto -> cajitas. Devuelve la lista de errores (vacía si todo fue bien).
+function setProgText(text) {
+  const p = parseProgression(text, 8);
+  if (p.errors.length) return p.errors;
+  if (!p.bars.length) return ['La progresión está vacía'];
+  const norm = (l, a, pc) => ROOTS.includes(l + a) ? l + a : noteName(pc, false);
+  setProgBars(p.bars.map(b => b.map(c => ({
+    root: norm(c.letter, c.acc, c.rootPc), q: c.quality,
+    bass: c.bass ? norm(c.bass.letter, c.bass.acc, c.bass.pc) : ''
+  }))));
+  return [];
+}
+$('progBoxes').onchange = e => {
+  const s = e.target, bx = s.closest('.bx'), cc = s.closest('.cc'); if (!cc) return;
+  const c = progBars[+bx.dataset.i][+cc.dataset.j];
+  if (s.classList.contains('r')) c.root = s.value; else if (s.classList.contains('q')) c.q = s.value; else c.bass = s.value;
+  syncProg();
+};
+$('progBoxes').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.closest('.bx').dataset.i, a = b.dataset.a;
+  if (a === 'dup') progBars.splice(i + 1, 0, cloneJ(progBars[i]));
+  if (a === 'del' && progBars.length > 1) progBars.splice(i, 1);
+  if (a === 'two') progBars[i].push(cloneJ(progBars[i][0]));
+  if (a === 'one') progBars[i].pop();
+  renderBoxes(); syncProg();
+};
+$('pbAdd').onclick = () => { progBars.push(cloneJ(progBars[progBars.length - 1] || [newChord()])); renderBoxes(); syncProg(); };
+$('pbAdd4').onclick = () => { for (let k = 0; k < 4; k++) progBars.push(cloneJ(progBars[progBars.length - 1] || [newChord()])); renderBoxes(); syncProg(); };
+$('pbClear').onclick = () => setProgBars([[newChord()]]);
+$('pbApply').onclick = () => {
+  const errs = setProgText($('fProg').value);
+  if (errs.length) msg(errs.join(' · ')); else msg('Texto pasado a cajitas.', true);
+};
+
+function clearForm() {
+  editingId = null; $('formTitulo').textContent = 'Nueva pista';
+  ['fUrl', 'fTitulo', 'fBpm'].forEach(i => $(i).value = '');
+  setProgBars([[newChord()], [newChord()], [newChord()], [newChord()]]);
+  $('fStart').value = 0; $('fBeats').value = 4; $('fEscala').value = 'mayor'; $('fKey').value = 0;
+  $('fMsg').textContent = ''; $('fGuardar').textContent = 'Guardar pista'; resetTaps();
+}
+function msg(t, ok) { $('fMsg').textContent = t; $('fMsg').className = 'msg ' + (ok ? 'ok' : 'err'); }
+$('fCancelar').onclick = clearForm;
+$('fCargar').onclick = () => {
+  const id = getYtId($('fUrl').value);
+  if (!id) return msg('No reconozco ese enlace de YouTube.');
+  loadVideo(id); msg('Vídeo cargado: dale a play, marca el tempo y fija el inicio.', true);
+};
+// Tap tempo: usa el tiempo del vídeo si suena (vale a cualquier velocidad); si no, el reloj.
+let taps = [], tapSrc = '';
+function resetTaps() { taps = []; $('tapInfo').textContent = 'Pulsa al ritmo del pulso mientras suena la pista (3 pulsos o más).'; }
+$('fTap').onclick = () => {
+  const media = isPlaying(), src = media ? 'v' : 'c';
+  const now = media ? curTime() : performance.now() / 1000;
+  if (src !== tapSrc || (taps.length && now - taps[taps.length - 1] > 2.5) || (taps.length && now < taps[taps.length - 1])) taps = [];
+  tapSrc = src; taps.push(now); taps = taps.slice(-9);
+  if (taps.length >= 3) {
+    const bpm = (taps.length - 1) / (taps[taps.length - 1] - taps[0]) * 60;
+    $('fBpm').value = (Math.round(bpm * 10) / 10);
+    $('tapInfo').textContent = `${taps.length} pulsos → ${bpm.toFixed(1)} BPM (sigue pulsando para afinar)`;
+  } else $('tapInfo').textContent = `${taps.length} pulso(s)… sigue`;
+};
+function nudgeForm(d) { $('fStart').value = Math.max(0, Math.round((+$('fStart').value + d) * 100) / 100); }
+$('fM').onclick = () => nudgeForm(-0.05);
+$('fP').onclick = () => nudgeForm(0.05);
+$('fAhora').onclick = () => { $('fStart').value = (Math.round(curTime() * 100) / 100); };
+
+$('form').onsubmit = e => {
+  e.preventDefault();
+  const videoId = getYtId($('fUrl').value);
+  if (!videoId) return msg('Falta un enlace de YouTube válido.');
+  const bpm = parseFloat($('fBpm').value);
+  if (!(bpm >= 30 && bpm <= 300)) return msg('El tempo debe estar entre 30 y 300 BPM.');
+  const beats = +$('fBeats').value;
+  const prog = $('fProg').value.trim();
+  const parsed = parseProgression(prog, beats);
+  if (!parsed.bars.length) return msg('La progresión es obligatoria (ej.: G | Em | C | D).');
+  if (parsed.errors.length) return msg(parsed.errors.join(' · '));
+  const t = {
+    id: editingId || 'p' + Date.now().toString(36),
+    url: $('fUrl').value.trim(), videoId, title: $('fTitulo').value.trim() || 'Pista sin título',
+    key: +$('fKey').value, scale: $('fEscala').value, bpm, beats,
+    startSec: Math.max(0, +$('fStart').value || 0), prog
+  };
+  const old = pistas.find(p => p.id === t.id);          // conserva el plan de vueltas y escalas por acorde
+  if (old) { if (old.etapas) t.etapas = old.etapas; if (old.vueltas) t.vueltas = old.vueltas; if (old.escalas) t.escalas = old.escalas;
+    if (old.acordeFijo) t.acordeFijo = true; if (old.posAcorde) t.posAcorde = old.posAcorde; }
+  const i = pistas.findIndex(p => p.id === t.id);
+  if (i >= 0) pistas[i] = t; else pistas.push(t);
+  savePistas(); msg('Pista guardada.', true);
+  aj.trackId = t.id; saveAj();
+  clearForm(); renderSelPista(); renderLista(); selectTrack(t.id);
+  $('fMsg').textContent = 'Pista guardada. Ya está seleccionada en la pestaña Práctica.'; $('fMsg').className = 'msg ok';
+};
+
+// ---------- lista, exportar, importar ----------
+function renderLista() {
+  const box = $('lista');
+  if (!pistas.length) { box.innerHTML = '<p class="meta">Aún no hay pistas.</p>'; return; }
+  box.innerHTML = pistas.map(p => `<div class="it" data-id="${p.id}">
+    <b>${esc(p.title)}</b>
+    <span class="meta">${keyName(p.key, p.scale)} ${SCALES[p.scale].nombre} · ${p.bpm} BPM · ${p.beats}/4 · inicio ${p.startSec}s · ${esc(p.prog)}</span>
+    <button data-a="practicar" class="primary">Practicar</button><button data-a="editar">Editar</button><button data-a="borrar" class="danger">Borrar</button></div>`).join('');
+}
+$('lista').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const id = b.closest('.it').dataset.id, t = pistas.find(p => p.id === id);
+  if (b.dataset.a === 'practicar') { renderSelPista(); $('selPista').value = id; selectTrack(id); showTab(true); }
+  if (b.dataset.a === 'editar') {
+    editingId = id; $('formTitulo').textContent = 'Editando: ' + t.title; $('fGuardar').textContent = 'Guardar cambios';
+    $('fUrl').value = t.url; $('fTitulo').value = t.title; $('fKey').value = t.key; $('fEscala').value = t.scale;
+    $('fBpm').value = t.bpm; $('fBeats').value = t.beats; $('fStart').value = t.startSec; $('fProg').value = t.prog;
+    const perr = setProgText(t.prog); if (perr.length) msg('La progresión guardada tiene problemas: ' + perr.join(' · '));
+    loadVideo(t.videoId); window.scrollTo(0, 0);
+  }
+  if (b.dataset.a === 'borrar' && confirm('¿Borrar la pista "' + t.title + '"?')) {
+    pistas = pistas.filter(p => p.id !== id); savePistas(); renderLista(); renderSelPista(); selectTrack(aj.trackId);
+  }
+};
+$('btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify({ version: 1, pistas }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pistas-guitarra.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('btnImport').onclick = () => $('fileImport').click();
+$('fileImport').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  importaTexto(await f.text());
+};
+$('btnPegar').onclick = () => { $('pegarBox').style.display = $('pegarBox').style.display === 'none' ? '' : 'none'; };
+$('pegarNo').onclick = () => { $('pegarBox').style.display = 'none'; $('pegarTxt').value = ''; };
+$('pegarOk').onclick = () => { if (importaTexto($('pegarTxt').value)) { $('pegarBox').style.display = 'none'; $('pegarTxt').value = ''; } };
+function importaTexto(texto) {
+  try {
+    const data = JSON.parse(texto);
+    const list = Array.isArray(data) ? data : data.pistas;
+    let n = 0;
+    list.forEach(p => {
+      if (!getYtId(p.url || p.videoId) || !(p.bpm > 0) || !p.prog || !SCALES[p.scale]) return;
+      const t = { id: p.id || 'p' + Date.now().toString(36) + n, url: p.url || p.videoId, videoId: getYtId(p.url || p.videoId),
+        title: p.title || 'Pista importada', key: mod12(+p.key || 0), scale: p.scale, bpm: +p.bpm, beats: +p.beats || 4,
+        startSec: +p.startSec || 0, prog: p.prog };
+      if (Array.isArray(p.vueltas)) t.vueltas = p.vueltas.filter(v => v === 'tonalidad' || v === 'acordes');
+      if (Array.isArray(p.etapas)) {
+        const ok = p.etapas.filter(e => e && (e.modo === 'tonalidad' || e.modo === 'acordes')).map(e => {
+          const o = { vueltas: Math.max(1, Math.min(99, parseInt(e.vueltas, 10) || 1)), modo: e.modo };
+          if (e.bars >= 1) o.bars = Math.min(64, Math.floor(e.bars));
+          if ([1, 2, 3, 4].includes(+e.paso)) o.paso = +e.paso;
+          if (DEG_SETS[e.empieza]) { o.empieza = e.empieza; o.termina = DEG_SETS[e.termina] ? e.termina : ''; }
+          return o;
+        });
+        if (ok.length) t.etapas = ok;
+      }
+      if (p.escalas && typeof p.escalas === 'object') t.escalas = p.escalas;
+      if (p.acordeFijo) t.acordeFijo = true;
+      if (p.posAcorde && typeof p.posAcorde === 'object') t.posAcorde = p.posAcorde;
+      const i = pistas.findIndex(x => x.id === t.id);
+      if (i >= 0) pistas[i] = t; else pistas.push(t);
+      n++;
+    });
+    savePistas(); renderLista(); renderSelPista(); selectTrack(aj.trackId);
+    msg(`${n} pista(s) importada(s).`, true);
+    return n > 0;
+  } catch (err) { msg('No he podido leer ese JSON.'); return false; }
+}
+
+// ---------- modo móvil (horizontal): contador y mástiles ampliados; los ajustes se abren con el botón ⚙ ----------
+const MQ_MOVIL = '(max-height: 520px) and (orientation: landscape), (pointer: coarse) and (max-width: 1000px)';
+function applyMovil() {
+  const q = new URLSearchParams(location.search).get('movil');                // ?movil=1 / ?movil=0 fuerzan el modo (pruebas)
+  const m = q === '1' ? true : q === '0' ? false : !!(window.matchMedia && matchMedia(MQ_MOVIL).matches);
+  if (document.body.classList.contains('movil') !== m) { document.body.classList.toggle('movil', m); lastKey = ''; chartKey = ''; }
+  if (!m) document.body.classList.remove('ajustes');
+}
+function setAjustes(on) {
+  document.body.classList.toggle('ajustes', on);
+  $('btnAjustes').textContent = on ? '✕' : '⚙';
+  if (on) showTab(true);
+  lastKey = ''; chartKey = '';
+}
+$('btnAjustes').onclick = () => setAjustes(!document.body.classList.contains('ajustes'));
+window.addEventListener('resize', applyMovil);
+window.addEventListener('orientationchange', applyMovil);
+
+// Mantener la pantalla encendida mientras suena la pista (si el navegador lo permite; necesita https o localhost)
+let wakeLock = null, lastPlaying = false;
+async function setWake(on) {
+  try {
+    if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) { /* no disponible */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && lastPlaying) setWake(true); });
+
+// Instalable y con arranque sin conexión cuando está publicada en una web (https)
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// ---------- arranque ----------
+applyMovil();
+fillKeySelect();
+clearForm();
+$('inpBars').value = aj.bars; $('selNombres').value = aj.nombres; $('selEtiqueta').value = aj.etiqueta;
+markRate(aj.rate);
+renderSelPista(); renderLista(); buildBeatDots(4);
+selectTrack(aj.trackId);
+// En el móvil sin pistas (primera vez) se abre directamente la pantalla de pistas, donde se puede importar el JSON.
+if (document.body.classList.contains('movil') && !pistas.length) { setAjustes(true); showTab(false); }
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
